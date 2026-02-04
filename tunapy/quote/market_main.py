@@ -2,7 +2,6 @@
 """
 import os
 import sys
-from logging import Logger
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(CURR_DIR)
@@ -17,13 +16,12 @@ from quote.okx_public_ws import okx_subscribe
 EXCHANGE_BN = 'Binance'
 EXCHANGE_OKX = 'OKX'
 
-
 def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[SelftradeParameter]):
     """ main workflow of market data
     """
     
     maker_symbols = [param.follow_symbol for param in maker_params]
-    selftrade_symbols = [param.follow_symbols for param in selftrade_params]
+    selftrade_symbols = [param.follow_symbol for param in selftrade_params]
     
     if exchange == EXCHANGE_BN:
         bn_subscribe(maker_symbols, selftrade_symbols)
@@ -31,8 +29,6 @@ def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[Se
         okx_subscribe(maker_symbols, selftrade_symbols)
     else:
         return
-
-
 
 if __name__ == '__main__':
     maker_params = [

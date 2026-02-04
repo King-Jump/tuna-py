@@ -206,3 +206,4 @@ def okx_subscribe(depth_symbols: list[str], ticker_symbols: list[str]):
         loop.run_until_complete(_forever_run(depth_symbols, ticker_symbols))
     finally:
         loop.close()    # clear after loop finished
+        

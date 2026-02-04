@@ -218,3 +218,5 @@ __marimo__/
 # Test
 log/
 local_env.py
+*.bak.py
+*.bak

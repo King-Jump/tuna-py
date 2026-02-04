@@ -1,10 +1,11 @@
 redis
 supervisor
 requests
-python-okx
-binance-common
+# binance-common
+python-binance
 binance-connector
-binance-sdk-spot
+# binance-sdk-spot
 pydantic
-binance-futures-connector
-okx
+# binance-futures-connector
+python-okx
+# King-Jump-octopus-py
