@@ -3,6 +3,9 @@
 
 class TokenParameter:
     def __init__(self, conf: dict) -> None:
+        self.sid = conf['Stragety Id']
+        self.exchange = conf['Exchange']
+        self.trade_type = conf['Term Type']
         self.api_key = conf['API KEY']     # the API key for Maker Account
         self.api_secret = conf['Secret']   # the API secret for Maker Account
         self.passphrase = conf['Passphrase'] # the passphrase for Maker Account

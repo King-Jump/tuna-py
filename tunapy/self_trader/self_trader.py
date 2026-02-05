@@ -14,11 +14,13 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from management.self_trade import TokenParameter as SelftradeParameter
-from otcopus.utils.log_util import create_logger
-from common.utils.redis_client import DATA_REDIS_CLIENT
+from octopuspy.utils.log_util import create_logger
+from utils.redis_client import DATA_REDIS_CLIENT
+from cexapi.helper import get_private_client
 
 BJ_TZ = timezone(timedelta(hours=8))
 SIDES = ['BUY', 'SELL']
+
 async def _trade(ctx: dict, symbol: str, price: str, qty: str):
     # TODO
     res = await ctx['client'].self_trade(symbol, random.choice(SIDES), price, qty)
@@ -123,7 +125,6 @@ async def self_trade(
 async def main(params: list[SelftradeParameter]):
     """ main workflow of self-trader
     """
-
     logger = create_logger(CURR_DIR, "selftrade.log", 'TUNA_SELFTRADE', backup_cnt=10)
     logger.info('start self-trade with config: %s', params)
 
@@ -140,11 +141,18 @@ async def main(params: list[SelftradeParameter]):
             # check self-trade frequency
             if _last_operating_ts.get(symbol, 0) + param.interval > ts:
                 continue
-
-            if symbol not in _prev_context:
-                client = get_rest_client()  # TODO create restful api
-                _prev_context[symbol] = {
+            sid = param.sid
+            if sid not in _prev_context:
+                client = get_private_client(
+                    exchange=param.exchange,
+                    api_key=param.api_key,
+                    api_secret=param.api_secret,
+                    passphrase=param.passphrase,
+                    logger=logger)
+                
+                _prev_context[sid] = {
                     'client': client, 'price':0, 'minute':0, 'qty':0}
+                
             tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol], logger)))
             _last_operating_ts[symbol] = ts
 
@@ -153,10 +161,15 @@ async def main(params: list[SelftradeParameter]):
         else:
             await asyncio.sleep(0.05)
 
-
 if __name__ == '__main__':
+    """
+    Reference: EXCHANGE_CHANNEL in cexapi/helper.py
+    """
     selftrade_params = [
         SelftradeParameter({
+            'Strategy Id' : '001', # sid必须是唯一的
+            'Exchange' : 'BN',      # eg. BN | OKX | BIFU
+            'Term Type' : 'SPOT',    # eg. SPOT | FUTURE | UMFUTURE
             'API KEY': '',
             'Secret': '',
             'Passphrase': '',
@@ -175,6 +188,9 @@ if __name__ == '__main__':
             'Price Divergence': 0.02,
         }),
         SelftradeParameter({
+            'Strategy Id' : '002', # sid必须是唯一的
+            'Exchange' : 'OKX',      # eg. BN | OKX | BIFU
+            'Term Type' : 'FUTURE',    # eg. SPOT | FUTURE | UMFUTURE
             'API KEY': '',
             'Secret': '',
             'Passphrase': '',
