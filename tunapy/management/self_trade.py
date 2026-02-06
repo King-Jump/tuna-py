@@ -20,4 +20,4 @@ class TokenParameter:
         self.max_amt_per_order = float(conf['Max Amt Per Order'])   # maximum amount of each order
         self.min_qty_per_order = float(conf['Min Qty'])             # minimum quantity of each order
         self.min_amt_per_order = float(conf['Min Amt'])             # minimum amount of each order
-        self.price_divergence = int(conf['Price Divergence'])       # maximum divergence of consequent self-trades
+        self.price_divergence = float(conf['Price Divergence'])       # maximum divergence of consequent self-trades
