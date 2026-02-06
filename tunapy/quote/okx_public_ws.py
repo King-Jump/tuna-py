@@ -12,12 +12,12 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(CURR_DIR)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
-    
+
 from octopuspy.utils.log_util import create_logger
-from utils.redis_client import DATA_REDIS_CLIENT
+from management.redis_client import DATA_REDIS_CLIENT
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-LOGGER = create_logger(os.path.join(CURR_PATH, 'log'), "okx_pubws.log", "OKX-PUBWS", 10)
+LOGGER = create_logger(os.path.join(CURR_PATH, 'log'), "okx_pub_ws.log", "OKX-PUBWS", 10)
 
 OKX_PUB_WS_STREAM = 'wss://ws.okx.com:8443/ws/v5/public'
 ORDER_BOOK = {}
@@ -26,16 +26,16 @@ BOOK_MESSAGE_BUFF = {}
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # OKX spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'okxsd'
+EXCHANGE_DEPTH_PREFIX = 'depth'
 # OKX spot ticker
-EXCHANGE_TICKER_PREFIX = 'okxst'
+EXCHANGE_TICKER_PREFIX = 'ticker'
 
 def _key(tag, ts):
     """ BiNance Spot
         The update period of Binance WS is 100ms.
         1 minutes have 60 * 10 = 600 (100ms)
     """
-    return f'{EXCHANGE_DEPTH_PREFIX}{tag}{ts % ONE_MIN_HUNDRED_MS}'
+    return f'{tag}{ts % ONE_MIN_HUNDRED_MS}'
 
 def _merge_ask_bid(ob_data, update_data):
     asks: dict = ob_data['asks']
@@ -63,7 +63,7 @@ def _get_msg_time_info(ob):
         ob_ts = float(ob['ts'])
         return seqId, prevSeqId, ob_ts
     except Exception as e:
-        print(e)
+        LOGGER.error(e)
         return "-2", "-3", 0
     
 def _merge_ob_fun(symbol: str, logger):
@@ -96,7 +96,7 @@ def _merge_ob_fun(symbol: str, logger):
     LOGGER.debug(f'thread ended for processing book message of {symbol}. before processing: {l1}messages, after processing: {len(msg_buff)}. time consumed: {t2-t1}s')
     # save in redis
     req_ts = int(10 * time.time())
-    rkey = _key(symbol, req_ts)
+    rkey = f'{EXCHANGE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', ob)
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
     LOGGER.info('Update Depth %s, ask size=%d, bid size=%s',
@@ -119,7 +119,7 @@ def _init_orderbook(j):
     LOGGER.debug('init order book: %s, %s', symbol, ORDER_BOOK[symbol])
     # save in redis
     req_ts = int(10 * time.time())
-    rkey = _key(symbol, req_ts)
+    rkey = f'{EXCHANGE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', ORDER_BOOK[symbol])
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
     LOGGER.info('Update Depth %s, ask size=%d, bid size=%s',
@@ -164,12 +164,11 @@ def _process_message(j:dict):
         if channel == 'tickers':
             _process_ticker(j)
         elif channel == 'books':
-            print("books: ", j['arg'])
             _process_book(j)
         else:
-            LOGGER.debug("imgnore message: %s", j)
+            LOGGER.debug("ignore message: %s", j)
     else:
-        LOGGER.debug("imgnore message: %s", j)  
+        LOGGER.debug("ignore message: %s", j)  
 
 def _on_message(message):
     try:

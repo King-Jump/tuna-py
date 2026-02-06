@@ -15,23 +15,99 @@ if BASE_DIR not in sys.path:
 
 from management.self_trade import TokenParameter as SelftradeParameter
 from octopuspy.utils.log_util import create_logger
-from utils.redis_client import DATA_REDIS_CLIENT
+from octopuspy.exchange.base_restapi import AskBid, NewOrder, OrderID
+from management.redis_client import DATA_REDIS_CLIENT
 from cexapi.helper import get_private_client
+
+# OKX spot partial depth
+# EXCHANGE_DEPTH_PREFIX = 'depth'
+# # OKX spot ticker
+EXCHANGE_TICKER_PREFIX = 'ticker'
 
 BJ_TZ = timezone(timedelta(hours=8))
 SIDES = ['BUY', 'SELL']
 
-async def _trade(ctx: dict, symbol: str, price: str, qty: str):
-    # TODO
-    res = await ctx['client'].self_trade(symbol, random.choice(SIDES), price, qty)
-    return res
+async def _trade(ctx: dict, term_type:str, symbol: str,
+                 price: str, qty: str, logger:Logger):
+    side = random.choice(SIDES)
+    ts = int(time.time()*1000)
+    contract_size = 0.1
+    leverage = 2
+    if term_type == 'SPOT':
+        orders = [
+            NewOrder(
+                symbol=symbol,
+                client_id=f'M{symbol}_{ts}',
+                side='BUY' if side == 'SELL' else 'SELL',
+                type="LIMIT",
+                quantity=qty,
+                price=price,
+                biz_type="SPOT",
+                tif='GTX',
+                reduce_only=False,
+                position_side='',
+                bait=False,
+                selftrade_enabled=False,
+            ),
+            NewOrder(
+                symbol=symbol,
+                client_id=f'T{symbol}_{ts}',
+                side=side,
+                type="LIMIT",
+                quantity=qty,
+                price=price,
+                biz_type="SPOT",
+                tif='IOC',
+                reduce_only=False,
+                position_side='',
+                bait=False,
+                selftrade_enabled=False,
+            )
+        ]
+    elif term_type == 'FUTURE':
+        orders = [
+            NewOrder(
+                symbol=symbol,
+                client_id=f'M{symbol}_{ts}',
+                side='BUY' if side == 'SELL' else 'SELL',
+                type="LIMIT",
+                quantity=str(int((float(qty) * leverage) / contract_size)),
+                price=price,
+                biz_type="FUTURE",
+                tif='GTX',
+                reduce_only=False,
+                position_side='LONG' if side == 'SELL' else 'SHORT',
+                bait=False,
+                selftrade_enabled=False,
+            ),
+            NewOrder(
+                symbol=symbol,
+                client_id=f'T{symbol}_{ts}',
+                side=side,
+                type="LIMIT",
+                quantity=str(int((float(qty) * leverage) / contract_size)),
+                price=price,
+                biz_type="FUTURE",
+                tif='IOC',
+                reduce_only=False,
+                position_side='SHORT' if side == 'SELL' else 'LONG',
+                bait=False,
+                selftrade_enabled=False,
+            )
+        ]
+    else:
+        logger.error("Unknown term_type: %s", term_type)
+        return None
+    logger.debug("selftrade trade 1: %s", orders[0])
+    logger.debug("selftrade trade 2: %s", orders[1])
+    return ctx['client'].batch_make_orders(orders)
 
 async def _cancel_orders(ctx, symbol, order_id, logger: Logger):
     for _retry in range(3):
         try:
-            # TODO
-            res = ctx['client'].cancel_orders([order_id], symbol)
-            if res and res.get('code') == 200 and order_id in res['data']:
+            res = ctx['client'].cancel_order(order_id, symbol)
+            # if res and res.get('code') == 200 and order_id in res['data']:
+            if res.order_id == order_id:
                 return True
         except Exception as e:
             logger.error("cancel_orders: %s; error: %s", order_id, e)
@@ -44,26 +120,27 @@ async def self_trade(
     """ self trade by mock or real execution
     """
     # get latest trade of following symbol
-    trade = DATA_REDIS_CLIENT.get_ticker(param)  # TODO get ticker from redis
+    symbol_key = f'{EXCHANGE_TICKER_PREFIX}{param.follow_symbol}'
+    trade = DATA_REDIS_CLIENT.get_ticker(symbol_key)
     logger.debug('%s ticker %s', param.follow_symbol, trade)
     if not trade or not trade.get('price') or not trade.get('qty'):
+        logger.warning('fail to get ticker %s', param.follow_symbol)
         return False
 
     # get current order book of self-traded symbol
     symbol = param.maker_symbol
-    ob = ctx['client'].get_top_askbid(symbol)
+    ob:AskBid = ctx['client'].top_askbid(symbol)
     logger.debug('%s order book %s', symbol, ob)
-
-    if not ob or not ob[0]['ap'] or not ob[0]['bp']:
+    if not ob:
         logger.warning('no order book %s', symbol)
         return False
 
-    top_ask, top_ask_qty = float(ob[0]['ap']), float(ob[0]['aq'])
-    top_bid, top_bid_aty = float(ob[0]['bp']), float(ob[0]['bq'])
-    qty = trade['qty'] * param.qty_multiplier
+    top_ask, top_ask_qty = float(ob[0].ap), float(ob[0].aq)
+    top_bid, top_bid_aty = float(ob[0].bp), float(ob[0].bq)
+    
+    qty = float(trade['qty']) * param.qty_multiplier
     # random coeficient
     _random_coef = 0.9995 + 0.00001 * random.randrange(0, 100)
-
     price_decimals = param.price_decimals
     qty_decimals = param.qty_decimals
     if trade['price']:
@@ -110,24 +187,23 @@ async def self_trade(
         if qty == ctx['qty']:
             qty *= 1.0001
         ctx['qty'] = qty
-        res = await _trade(ctx, symbol,
+        # res : List[OrderID]
+        res = await _trade(ctx, symbol, param.term_type,
                            str(round(price, price_decimals) if price_decimals else int(price)),
-                           str(round(qty, qty_decimals) if qty_decimals else int(qty)))
+                           str(round(qty, qty_decimals) if qty_decimals else int(qty)),
+                           logger)
         logger.info(res)
-
         if res:
             # selftrade by real trade, cancel the maker order
-            await _cancel_orders(ctx, symbol, res[0]['orderId'], logger)
+            await _cancel_orders(ctx, symbol, res[0].order_id, logger)
         return True
     return False
-
 
 async def main(params: list[SelftradeParameter]):
     """ main workflow of self-trader
     """
     logger = create_logger(CURR_DIR, "selftrade.log", 'TUNA_SELFTRADE', backup_cnt=10)
     logger.info('start self-trade with config: %s', params)
-
     # previous operation timestamp
     _last_operating_ts = {}
     # previous self trade context
@@ -141,21 +217,17 @@ async def main(params: list[SelftradeParameter]):
             # check self-trade frequency
             if _last_operating_ts.get(symbol, 0) + param.interval > ts:
                 continue
-            sid = param.sid
-            if sid not in _prev_context:
+            if symbol not in _prev_context:
                 client = get_private_client(
-                    exchange=param.exchange,
+                    exchange=param.follow_exchange,
                     api_key=param.api_key,
                     api_secret=param.api_secret,
                     passphrase=param.passphrase,
-                    logger=logger)
-                
-                _prev_context[sid] = {
-                    'client': client, 'price':0, 'minute':0, 'qty':0}
-                
+                    logger=logger,
+                )
+                _prev_context[symbol] = {'client': client, 'price':0, 'minute':0, 'qty':0}
             tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol], logger)))
             _last_operating_ts[symbol] = ts
-
         if tasks:
             await asyncio.gather(*tasks)
         else:
@@ -167,9 +239,6 @@ if __name__ == '__main__':
     """
     selftrade_params = [
         SelftradeParameter({
-            'Strategy Id' : '001', # sid必须是唯一的
-            'Exchange' : 'BN',      # eg. BN | OKX | BIFU
-            'Term Type' : 'SPOT',    # eg. SPOT | FUTURE | UMFUTURE
             'API KEY': '',
             'Secret': '',
             'Passphrase': '',
@@ -188,9 +257,6 @@ if __name__ == '__main__':
             'Price Divergence': 0.02,
         }),
         SelftradeParameter({
-            'Strategy Id' : '002', # sid必须是唯一的
-            'Exchange' : 'OKX',      # eg. BN | OKX | BIFU
-            'Term Type' : 'FUTURE',    # eg. SPOT | FUTURE | UMFUTURE
             'API KEY': '',
             'Secret': '',
             'Passphrase': '',

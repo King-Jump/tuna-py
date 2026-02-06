@@ -5,20 +5,18 @@ import time
 import ujson
 
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
-from common.utils.redis_client import DATA_REDIS_CLIENT
-from otcopus.utils.log_util import create_logger
-
+from management.redis_client import DATA_REDIS_CLIENT
+from octopuspy.utils.log_util import create_logger
 
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # binance spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'bnsd'
+EXCHANGE_DEPTH_PREFIX = 'depth'
 # binance spot ticker
-EXCHANGE_TICKER_PREFIX = 'bnst'
+EXCHANGE_TICKER_PREFIX = 'ticker'
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 LOGGER = create_logger(os.path.join(CURR_PATH, 'log'), "bn_pubws.log", "BN-PUBWS", 10)
-
 
 def _key(tag, ts):
     """ BiNance Spot
@@ -26,7 +24,6 @@ def _key(tag, ts):
         1 minutes have 60 * 10 = 600 (100ms)
     """
     return f'{EXCHANGE_DEPTH_PREFIX}{tag}{ts % ONE_MIN_HUNDRED_MS}'
-
 
 def _handle_orderbook_depth(rkey: str, req_ts: int, data: dict) -> dict:
     order_book = {

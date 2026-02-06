@@ -13,13 +13,9 @@ from management.self_trade import TokenParameter as SelftradeParameter
 from quote.bn_public_ws import bn_subscribe
 from quote.okx_public_ws import okx_subscribe
 
-EXCHANGE_BN = 'Binance'
-EXCHANGE_OKX = 'OKX'
-
 def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[SelftradeParameter]):
     """ main workflow of market data
     """
-    
     maker_symbols = [param.follow_symbol for param in maker_params]
     selftrade_symbols = [param.follow_symbol for param in selftrade_params]
     
@@ -33,6 +29,7 @@ def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[Se
 if __name__ == '__main__':
     maker_params = [
         MakerParameter({
+            'follow_exchange': 'binance_',
             'follow_symbol': 'BTCUSDT',
             'maker_symbol': 'btc_usdt',
             'price_decimals': 2,
