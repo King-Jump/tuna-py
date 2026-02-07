@@ -10,10 +10,10 @@ BASE_DIR = os.path.dirname(CURR_DIR)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
     
-from utils.db_util import RDB, get_int, get_float, set_float, get_dict
+from tunapy.utils.db_util import RDB, get_int, get_float, set_float, get_dict
 
 ONE_MIN_HUNDRED_MS = 600
-
+EXCHANGE_TICKER_PREFIX = "ticker"
 class DATA_REDIS_CLIENT:
     """
     # fundamental API
@@ -29,6 +29,8 @@ class DATA_REDIS_CLIENT:
     def get_int(cls, key: str) -> int:
         """ get int value
         """
+        # import pdb; pdb.set_trace()
+        # print("DATA_REDIS_CLIENT.get_int: key=", key)
         return get_int(key)
 
     @classmethod
@@ -63,9 +65,9 @@ class DATA_REDIS_CLIENT:
         # backforward to last minute
         for prev_tag in range(current_tag, current_tag - ONE_MIN_HUNDRED_MS, -1):
             tag = (prev_tag + ONE_MIN_HUNDRED_MS) % ONE_MIN_HUNDRED_MS  # prev_tag may less than zero
-            _key=f'{symbol_key}{tag}'
+            _key=f'{EXCHANGE_TICKER_PREFIX}{symbol_key}{tag}'
             t1 = cls.get_int(_key)
-            if t1 <= ts:
+            if t1 and t1 <= ts:
                 prev_ticker = cls.get_dict(f'{_key}_value')
                 if prev_ticker:
                     return prev_ticker  # nearest order_book

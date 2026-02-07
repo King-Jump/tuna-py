@@ -11,7 +11,11 @@ LOGGER = create_logger(".", "self_trader_unittest.log", "SELF_TRADE", 1)
 
 from trader_unittest import TraderUnitTest
 from test_env import API_KEY, SECRET, PASSPHRASE
+
 class SelfTraderUnitTest(TraderUnitTest):
+    def setUp(self):
+        super().setUp()
+        self.mock_trade = True # do not call exchange client
     
     def test_00_init_parameter(self):
         print("=============== test_00_init_parameter ===============")

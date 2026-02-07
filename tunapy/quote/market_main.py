@@ -8,12 +8,16 @@ BASE_DIR = os.path.dirname(CURR_DIR)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from management.market_making import TokenParameter as MakerParameter
-from management.self_trade import TokenParameter as SelftradeParameter
+#from management.market_making import TokenParameter as MakerParameter
+# from management.self_trade import TokenParameter as SelftradeParameter
+from management.quote import TokenParameter as QuoteParameter
 from quote.bn_public_ws import bn_subscribe
 from quote.okx_public_ws import okx_subscribe
 
-def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[SelftradeParameter]):
+EXCHANGE_BN = "binance_spot"
+EXCHANGE_OKX = "okx_spot"
+
+def main(exchange, maker_params: list[QuoteParameter], selftrade_params: list[QuoteParameter]):
     """ main workflow of market data
     """
     maker_symbols = [param.follow_symbol for param in maker_params]
@@ -27,35 +31,35 @@ def main(exchange, maker_params: list[MakerParameter], selftrade_params: list[Se
         return
 
 if __name__ == '__main__':
+    exchange = EXCHANGE_BN
     maker_params = [
-        MakerParameter({
-            'follow_exchange': 'binance_',
-            'follow_symbol': 'BTCUSDT',
-            'maker_symbol': 'btc_usdt',
-            'price_decimals': 2,
-            'qty_decimals': 5,
+        QuoteParameter({
+            'Follow Symbol': 'btcusdt',
+            'Maker Symbol': 'btcusdt',
+            'Maker Price Decimals': 2,
+            'Maker Qty Decimals': 5,
         }),
-        MakerParameter({
-            'follow_symbol': 'ETHUSDT',
-            'maker_symbol': 'eth_usdt',
-            'price_decimals': 2,
-            'qty_decimals': 4,
-        }),
+        QuoteParameter({
+            'Follow Symbol': 'ethusdt',
+            'Maker Symbol': 'ethusdt',
+            'Maker Price Decimals': 2,
+            'Maker Qty Decimals': 4,
+        })
     ]
 
     selftrade_params = [
-        SelftradeParameter({
-            'follow_symbol': 'BTCUSDT',
-            'maker_symbol': 'btc_usdt',
-            'price_decimals': 2,
-            'qty_decimals': 5,
+        QuoteParameter({
+            'Follow Symbol': 'btcusdt',
+            'Maker Symbol': 'btcusdt',
+            'Maker Price Decimals': 2,
+            'Maker Qty Decimals': 5,
         }),
-        SelftradeParameter({
-            'follow_symbol': 'ETHUSDT',
-            'maker_symbol': 'eth_usdt',
-            'price_decimals': 2,
-            'qty_decimals': 4,
+        QuoteParameter({
+            'Follow Symbol': 'ethusdt',
+            'Maker Symbol': 'ethusdt',
+            'Maker Price Decimals': 2,
+            'Maker Qty Decimals': 4,
         })
     ]
     
-    main(EXCHANGE_BN, maker_params, selftrade_params)
+    main("binance_spot", maker_params, selftrade_params)

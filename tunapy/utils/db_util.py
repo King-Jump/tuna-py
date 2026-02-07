@@ -7,7 +7,7 @@ from redis import ConnectionPool
 from functools import lru_cache
 
 REDIS_CONFIG = {
-    "host": "127.0.0.1", "port": 6379, "password": "",
+    "host": "127.0.0.1", "port": 6379, "password": "123456",
     "max_connections": 5,
     "socket_connect_timeout": 1,
     "health_check_interval": 30,
@@ -43,7 +43,9 @@ def RDB():
 def get_int(key: str) -> int:
     """ get int value
     """
+    # print(f"get_int [{key}]")
     res = RDB().get(key)
+    # print(f"get_int result: [{res}]")
     if res:
         return int(res)
     return res

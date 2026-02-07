@@ -1,11 +1,17 @@
 """ Binance Quote on WS
 """
 import os
+import sys
 import time
 import ujson
 
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(CURR_DIR))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+    
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
-from management.redis_client import DATA_REDIS_CLIENT
+from tunapy.management.redis_client import DATA_REDIS_CLIENT
 from octopuspy.utils.log_util import create_logger
 
 # one munite = 600 * 100 ms
@@ -16,7 +22,7 @@ EXCHANGE_DEPTH_PREFIX = 'depth'
 EXCHANGE_TICKER_PREFIX = 'ticker'
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-LOGGER = create_logger(os.path.join(CURR_PATH, 'log'), "bn_pubws.log", "BN-PUBWS", 10)
+LOGGER = create_logger(BASE_DIR, "bn_pub_ws.log", "BN-PUBWS", 10)
 
 def _key(tag, ts):
     """ BiNance Spot
@@ -38,19 +44,19 @@ def _handle_orderbook_depth(rkey: str, req_ts: int, data: dict) -> dict:
     return order_book
 
 def _handle_ticker(data: dict, req_ts: int) -> dict:
-    symbol = data['data']['s']
+    symbol = data['data']['s'].lower()  # bn symbol default lowercase
     price = float(data['data']['p'])
     qty = float(data['data']['q'])
-
     rkey = f'{EXCHANGE_TICKER_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', {'price': price, 'qty': qty})
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
-    LOGGER.info('Update Tick %s, price=%s, qty=%s', symbol, price, qty)
+    LOGGER.info('Update Tick %s, price=%s, qty=%s', rkey, price, qty)
 
 def message_handler(_, message):
     ''' thread and message
     '''
     message = ujson.loads(message)
+    LOGGER.debug("message received: %s", message)
     if 'stream' in message:
         req_ts = int(10 * time.time())
         if 'depth' in message['stream']:
@@ -58,7 +64,6 @@ def message_handler(_, message):
             rkey = _key(pair, req_ts)
             # order book partial depth
             _handle_orderbook_depth(rkey, req_ts, message['data'])
-
         elif 'aggTrade' in message['stream']:
             _handle_ticker(message, req_ts)
 
@@ -73,11 +78,11 @@ def bn_subscribe(depth_symbols: list[str], ticker_symbols: list[str]):
                                    is_combined=True)
     topics = []
     for symbol in depth_symbols:
-        symbol = symbol.lower()
-        topics.append(f'{symbol}@depth20@100ms')
+        topics.append(f'{symbol.lower()}@depth20@100ms')
     for symbol in ticker_symbols:
         topics.append(f'{symbol}@aggTrade')
 
+    LOGGER.debug("bn subscribe topics: %s", topics)
     ws.subscribe(stream=topics)
 
     while 1:

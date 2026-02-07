@@ -41,7 +41,7 @@ def get_private_client(
     """ create private user client
     """
     client_type = _get_channel(exchange_name=exchange)
-    if not client_type:
+    if client_type:
         client_params = ClientParams(base_url="",
                                      api_key=api_key,
                                      secret=api_secret,

@@ -9,7 +9,7 @@ import threading
 from okx.websocket.WsPublicAsync import WsPublicAsync
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(CURR_DIR)
+BASE_DIR = os.path.dirname(os.path.dirname(CURR_DIR))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
@@ -17,7 +17,7 @@ from octopuspy.utils.log_util import create_logger
 from management.redis_client import DATA_REDIS_CLIENT
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-LOGGER = create_logger(os.path.join(CURR_PATH, 'log'), "okx_pub_ws.log", "OKX-PUBWS", 10)
+LOGGER = create_logger(BASE_DIR, "okx_pub_ws.log", "OKX-PUBWS", 10)
 
 OKX_PUB_WS_STREAM = 'wss://ws.okx.com:8443/ws/v5/public'
 ORDER_BOOK = {}
