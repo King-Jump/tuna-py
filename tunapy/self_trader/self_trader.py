@@ -9,15 +9,15 @@ import asyncio
 from logging import Logger
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(CURR_DIR)
+BASE_DIR = os.path.dirname(os.path.dirname(CURR_DIR))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from management.self_trade import TokenParameter as SelftradeParameter
 from octopuspy.utils.log_util import create_logger
 from octopuspy.exchange.base_restapi import AskBid, NewOrder, OrderID
-from management.redis_client import DATA_REDIS_CLIENT
-from cexapi.helper import get_private_client
+from tunapy.management.self_trade import TokenParameter as SelftradeParameter
+from tunapy.management.redis_client import DATA_REDIS_CLIENT
+from tunapy.cexapi.helper import get_private_client
 
 # OKX spot partial depth
 # EXCHANGE_DEPTH_PREFIX = 'depth'
@@ -30,7 +30,7 @@ SIDES = ['BUY', 'SELL']
 UNIT_TEST = True
 TEST_HOOK = {}
 
-async def _trade(ctx: dict, term_type:str, symbol: str,
+async def _trade(ctx: dict, symbol: str, term_type:str,
                  price: str, qty: str, logger:Logger):
     side = random.choice(SIDES)
     ts = int(time.time()*1000)
@@ -103,7 +103,8 @@ async def _trade(ctx: dict, term_type:str, symbol: str,
         return None
     logger.debug("selftrade trade 1: %s", orders[0])
     logger.debug("selftrade trade 2: %s", orders[1])
-    return ctx['client'].batch_make_orders(orders)
+    import pdb; pdb.set_trace()
+    return ctx['client'].batch_make_orders(orders, symbol)
 
 async def _cancel_orders(ctx, symbol, order_id, logger: Logger):
     for _retry in range(3):
@@ -123,8 +124,10 @@ async def self_trade(
     """ self trade by mock or real execution
     """
     # get latest trade of following symbol
-    symbol_key = f'{EXCHANGE_TICKER_PREFIX}{param.follow_symbol}'
-    trade = DATA_REDIS_CLIENT.get_ticker(symbol_key)
+    # import pdb; pdb.set_trace()
+    logger.debug("self_trade begin!")
+    # symbol_key = f'{EXCHANGE_TICKER_PREFIX}{param.follow_symbol}'
+    trade = DATA_REDIS_CLIENT.get_ticker(param.follow_symbol)
     logger.debug('%s ticker %s', param.follow_symbol, trade)
     if not trade or not trade.get('price') or not trade.get('qty'):
         logger.warning('fail to get ticker %s', param.follow_symbol)
@@ -192,13 +195,13 @@ async def self_trade(
         ctx['qty'] = qty
 
         # unit test
-        if UNIT_TEST:
-            fun_name = sys._getframe(0).f_code.co_name
-            if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
-                for var_name in TEST_HOOK[fun_name]["hooks"].keys():
-                    TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
-            if TEST_HOOK[fun_name]["break"]:
-                return False
+        # if UNIT_TEST:
+        #     fun_name = sys._getframe(0).f_code.co_name
+        #     if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
+        #         for var_name in TEST_HOOK[fun_name]["hooks"].keys():
+        #             TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
+        #     if TEST_HOOK[fun_name]["break"]:
+        #         return False
 
         # res : List[OrderID]
         res = await _trade(ctx, symbol, param.term_type,
@@ -215,7 +218,7 @@ async def self_trade(
 async def main(params: list[SelftradeParameter]):
     """ main workflow of self-trader
     """
-    logger = create_logger(CURR_DIR, "selftrade.log", 'TUNA_SELFTRADE', backup_cnt=10)
+    logger = create_logger(BASE_DIR, "selftrade.log", 'TUNA_SELFTRADE', backup_cnt=10)
     logger.info('start self-trade with config: %s', params)
     # previous operation timestamp
     _last_operating_ts = {}
@@ -240,34 +243,39 @@ async def main(params: list[SelftradeParameter]):
                 )
                 _prev_context[symbol] = {'client': client, 'price':0, 'minute':0, 'qty':0}
             tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol], logger)))
+            logger.debug("append task: self_trade with param=[%s], _prev_context=[%s], symbol=[%s]",
+                         param, _prev_context[symbol], symbol)
             _last_operating_ts[symbol] = ts
 
         # hook for unittest
-        if UNIT_TEST:
-            fun_name = sys._getframe(0).f_code.co_name
-            _pctx = _prev_context[symbol]
-            if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
-                for var_name in TEST_HOOK[fun_name]["hooks"].keys():
-                    TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
-            if TEST_HOOK[fun_name]["break"]:
-                break
+        # if UNIT_TEST:
+        #     fun_name = sys._getframe(0).f_code.co_name
+        #     _pctx = _prev_context[symbol]
+        #     if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
+        #         for var_name in TEST_HOOK[fun_name]["hooks"].keys():
+        #             TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
+        #     if TEST_HOOK[fun_name]["break"]:
+        #         break
         if tasks:
             await asyncio.gather(*tasks)
         else:
             await asyncio.sleep(0.05)
-
+            
+from test_env import API_KEY, SECRET, PASSPHRASE
 if __name__ == '__main__':
     """
     Reference: EXCHANGE_CHANNEL in cexapi/helper.py
     """
     selftrade_params = [
         SelftradeParameter({
-            'API KEY': '',
-            'Secret': '',
-            'Passphrase': '',
+            'API KEY': API_KEY,
+            'Secret': SECRET,
+            'Passphrase': PASSPHRASE,
 
-            'Follow Symbol': 'BTCUSDT',
-            'Maker Symbol': 'btc_usdt',
+            'Follow Exchange': 'binance_spot',
+            'Follow Symbol': 'btcusdt',
+            'Maker Symbol': 'BTCUSDT',
+            'Term type': 'SPOT',
             'Maker Price Decimals': 2,
             'Maker Qty Decimals': 5,
             
@@ -280,14 +288,16 @@ if __name__ == '__main__':
             'Price Divergence': 0.02,
         }),
         SelftradeParameter({
-            'API KEY': '',
-            'Secret': '',
-            'Passphrase': '',
+            'API KEY': API_KEY,
+            'Secret': SECRET,
+            'Passphrase': PASSPHRASE,
             
-            'follow_symbol': 'ETHUSDT',
-            'maker_symbol': 'eth_usdt',
-            'price_decimals': 2,
-            'qty_decimals': 4,
+            'Follow Exchange': 'binance_spot',
+            'Follow Symbol': 'ethusdt',
+            'Maker Symbol': 'ETHUSDT',
+            'Term type': 'SPOT',
+            'Maker Price Decimals': 2,
+            'Maker Qty Decimals': 4,
 
             'Interval': 2,
             'Quote Timeout': 1,
@@ -298,5 +308,4 @@ if __name__ == '__main__':
             'Price Divergence': 0.02,
         })
     ]
-
     asyncio.run(main(selftrade_params))

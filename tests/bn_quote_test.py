@@ -1,3 +1,8 @@
+"""
+Test market info functionality, on binance with symbol ethusdt.
+Validate return data scheme, integrity, calculate time delay.
+Before starting this program, start market_main with prarmeter "exchange = EXCHANGE_BN"
+"""
 import time
 import os
 import sys

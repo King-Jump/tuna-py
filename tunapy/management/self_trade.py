@@ -12,7 +12,7 @@ class TokenParameter:
         self.maker_symbol = conf['Maker Symbol']     # the mirroring symbol
         self.price_decimals = int(conf['Maker Price Decimals'])      # price decimals of maker symbol
         self.qty_decimals = int(conf['Maker Qty Decimals'])          # quantity decimals of maker symbol
-        self.term_type = conf["term_type"]    # SPOT | FUTURE
+        self.term_type = conf["Term type"]    # SPOT | FUTURE
 
         self.interval = max(0.1, float(conf['Interval']))   # interval of trading
         self.quote_timeout = float(conf['Quote Timeout'])   # timeout of quote update of follow symbol

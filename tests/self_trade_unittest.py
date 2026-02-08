@@ -25,8 +25,8 @@ class SelfTraderUnitTest(TraderUnitTest):
             'Passphrase': PASSPHRASE,
             
             'Follow Exchange': 'binance_spot',
-            'Follow Symbol': 'BTCUSDT',
-            'Maker Symbol': 'btc_usdt',
+            'Follow Symbol': 'btcusdt',
+            'Maker Symbol': 'btcusdt',
             'Maker Price Decimals': 2,
             'Maker Qty Decimals': 5,
             'term_type': 'SPOT',

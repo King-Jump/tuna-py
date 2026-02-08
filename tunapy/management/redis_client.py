@@ -67,7 +67,7 @@ class DATA_REDIS_CLIENT:
             tag = (prev_tag + ONE_MIN_HUNDRED_MS) % ONE_MIN_HUNDRED_MS  # prev_tag may less than zero
             _key=f'{EXCHANGE_TICKER_PREFIX}{symbol_key}{tag}'
             t1 = cls.get_int(_key)
-            if t1 and t1 <= ts:
+            if t1 and ts-ONE_MIN_HUNDRED_MS < t1 <= ts:
                 prev_ticker = cls.get_dict(f'{_key}_value')
                 if prev_ticker:
                     return prev_ticker  # nearest order_book

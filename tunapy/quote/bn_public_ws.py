@@ -67,7 +67,6 @@ def message_handler(_, message):
         elif 'aggTrade' in message['stream']:
             _handle_ticker(message, req_ts)
 
-
 def error_handler(_, message):
     LOGGER.error(message)
 

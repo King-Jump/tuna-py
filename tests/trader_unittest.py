@@ -17,16 +17,12 @@ INTERMEDIATE_RESULT = {}
 
 from tunapy.self_trader.self_trader import TEST_HOOK, UNIT_TEST, main
 
-async def _run_tasks(tasks):
-    return await asyncio.gather(tasks)
-    
 class TraderUnitTest(ColorfulTestCase):
     """Class for trader unit test
     self.result: {
         "init_params": [{}]    # trader init parameter
         "self_trade_params": StTokenParameter    # trader init parameter
     }
-    
     """
     def setUp(self):
         # This function runs before each test method
