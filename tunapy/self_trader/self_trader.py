@@ -1,6 +1,6 @@
 """ JumpMaker Self-Trader
 """
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 import os
 import sys
 import time
@@ -14,7 +14,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from octopuspy.utils.log_util import create_logger
-from octopuspy.exchange.base_restapi import AskBid, NewOrder, OrderID
+from octopuspy.exchange.base_restapi import AskBid, NewOrder
 from tunapy.management.self_trade import TokenParameter as SelftradeParameter
 from tunapy.management.redis_client import DATA_REDIS_CLIENT
 from tunapy.cexapi.helper import get_private_client

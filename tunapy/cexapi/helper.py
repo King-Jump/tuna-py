@@ -1,13 +1,13 @@
 from logging import Logger
 
 from octopuspy.exchange.base_restapi import ClientParams
-from octopuspy.exchange.binance_restapi import BnSpotClient
-from octopuspy.exchange.binance_future_restapi import BnFutureClient    # Portfolio margin
-from octopuspy.exchange.binance_umfuture_restapi import BnUMFutureClient    # UMFuture
-from octopuspy.exchange.okx_restapi import OkxSpotClient
-from octopuspy.exchange.okx_future_restapi import OkxFutureClient
-from octopuspy.exchange.bifu_restapi import BifuSpotClient
-from octopuspy.exchange.bifu_future_restapi import BifuFutureClient
+from octopuspy.exchange.binance.spot_restapi import BnSpotClient
+from octopuspy.exchange.binance.future_restapi import BnFutureClient    # Portfolio margin
+from octopuspy.exchange.binance.umfuture_restapi import BnUMFutureClient    # UMFuture
+from octopuspy.exchange.okx.spot_restapi import OkxSpotClient
+from octopuspy.exchange.okx.future_restapi import OkxFutureClient
+from octopuspy.exchange.bifu.spot_restapi import BifuSpotClient
+from octopuspy.exchange.bifu.future_restapi import BifuFutureClient
 
 # CONST EXCHANGE CLIENT TYPE
 EXCHANGE_CHANNEL = {
