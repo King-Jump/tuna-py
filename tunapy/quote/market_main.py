@@ -12,10 +12,14 @@ if BASE_DIR not in sys.path:
 # from management.self_trade import TokenParameter as SelftradeParameter
 from management.quote import TokenParameter as QuoteParameter
 from quote.bn_public_ws import bn_subscribe
+from quote.bn_future_public_ws import bn_future_subscribe
 from quote.okx_public_ws import okx_subscribe
+from quote.okx_future_public_ws import okx_future_subscribe
 
 EXCHANGE_BN = "binance_spot"
+EXCHANGE_BN_FUTURE = "binance_future"
 EXCHANGE_OKX = "okx_spot"
+EXCHANGE_OKX_FUTURE = "okx_future"
 
 def main(exchange, maker_params: list[QuoteParameter], selftrade_params: list[QuoteParameter]):
     """ main workflow of market data
@@ -25,8 +29,12 @@ def main(exchange, maker_params: list[QuoteParameter], selftrade_params: list[Qu
     
     if exchange == EXCHANGE_BN:
         bn_subscribe(maker_symbols, selftrade_symbols)
+    elif exchange == EXCHANGE_BN_FUTURE:
+        bn_future_subscribe(maker_symbols, selftrade_symbols)
     elif exchange == EXCHANGE_OKX:
         okx_subscribe(maker_symbols, selftrade_symbols)
+    elif exchange == EXCHANGE_OKX_FUTURE:
+        okx_future_subscribe(maker_symbols, selftrade_symbols)
     else:
         return
 
@@ -62,4 +70,4 @@ if __name__ == '__main__':
         })
     ]
     
-    main("binance_spot", maker_params, selftrade_params)
+    main(EXCHANGE_BN_FUTURE, maker_params, selftrade_params)

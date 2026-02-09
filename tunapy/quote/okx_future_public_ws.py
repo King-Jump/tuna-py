@@ -1,4 +1,3 @@
-
 import os
 import sys
 import asyncio
@@ -17,27 +16,27 @@ from octopuspy.utils.log_util import create_logger
 from management.redis_client import DATA_REDIS_CLIENT
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-LOGGER = create_logger(BASE_DIR, "okx_pub_ws.log", "OKX-PUBWS", 10)
+LOGGER = create_logger(BASE_DIR, "okx_future_pub_ws.log", "OKX-FUTURE-PUBWS", 10)
 
 # Global variables for reconnection
 WS_CLIENT = None
 DEPTH_SYMBOLS = []
 TICKER_SYMBOLS = []
 
-OKX_PUB_WS_STREAM = 'wss://ws.okx.com:8443/ws/v5/public'
+OKX_FUTURE_PUB_WS_STREAM = 'wss://ws.okx.com:8443/ws/v5/public'
 ORDER_BOOK = {}
 BOOK_MESSAGE_BUFF = {}
 
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
-# OKX spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'depth'
-# OKX spot ticker
-EXCHANGE_TICKER_PREFIX = 'ticker'
+# OKX future partial depth
+EXCHANGE_FUTURE_DEPTH_PREFIX = 'future_depth'
+# OKX future ticker
+EXCHANGE_FUTURE_TICKER_PREFIX = 'future_ticker'
 
 def _key(tag, ts):
-    """ Okx Spot Partial Depth
-        The update period of Okx WS is 100ms.
+    """ OKX Future
+        The update period of OKX WS is 100ms.
         1 minutes have 60 * 10 = 600 (100ms)
     """
     return f'{tag}{ts % ONE_MIN_HUNDRED_MS}'
@@ -101,10 +100,10 @@ def _merge_ob_fun(symbol: str, logger):
     LOGGER.debug(f'thread ended for processing book message of {symbol}. before processing: {l1}messages, after processing: {len(msg_buff)}. time consumed: {t2-t1}s')
     # save in redis
     req_ts = int(10 * time.time())
-    rkey = f'{EXCHANGE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
+    rkey = f'{EXCHANGE_FUTURE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', ob)
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
-    LOGGER.info('Update Depth %s, ask size=%d, bid size=%s',
+    LOGGER.info('Update Future Depth %s, ask size=%d, bid size=%s',
                 rkey, len(ob['asks']), len(ob['bids']))
 
 def _init_orderbook(j):
@@ -124,10 +123,10 @@ def _init_orderbook(j):
     LOGGER.debug('init order book: %s, %s', symbol, ORDER_BOOK[symbol])
     # save in redis
     req_ts = int(10 * time.time())
-    rkey = f'{EXCHANGE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
+    rkey = f'{EXCHANGE_FUTURE_DEPTH_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', ORDER_BOOK[symbol])
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
-    LOGGER.info('Update Depth %s, ask size=%d, bid size=%s',
+    LOGGER.info('Update Future Depth %s, ask size=%d, bid size=%s',
                 rkey, len(ORDER_BOOK[symbol]['asks']), len(ORDER_BOOK[symbol]['bids']))
 
 def _update_orderbook(j):
@@ -145,13 +144,12 @@ def _process_ticker(j):
     symbol = j['arg']['instId']
     # caculate ts, create key, save to redis
     req_ts = int(10 * time.time())
-    rkey = f'{EXCHANGE_TICKER_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
+    rkey = f'{EXCHANGE_FUTURE_TICKER_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', {'price': last_price, 'qty': last_sz})
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
-    LOGGER.info('Update Tick %s, price=%s, qty=%s', symbol, last_price, last_sz)
+    LOGGER.info('Update Future Tick %s, price=%s, qty=%s', symbol, last_price, last_sz)
     
 def _process_book(j):
-    #self.logger.debug("processing book message: %s" % j)
     if j['action'] == 'snapshot':
         _init_orderbook(j)
     elif j['action'] == 'update':
@@ -198,8 +196,8 @@ async def _forever_run():
             BOOK_MESSAGE_BUFF = {}
             
             # Create new WebSocket client
-            LOGGER.info("Connecting to OKX WebSocket...")
-            ws = WsPublicAsync(OKX_PUB_WS_STREAM)
+            LOGGER.info("Connecting to OKX Future WebSocket...")
+            ws = WsPublicAsync(OKX_FUTURE_PUB_WS_STREAM)
             WS_CLIENT = ws
             
             # Start WebSocket client
@@ -209,22 +207,22 @@ async def _forever_run():
             args = _create_args(DEPTH_SYMBOLS, TICKER_SYMBOLS)
             
             # Subscribe to topics
-            LOGGER.debug("Subscribing to topics: %s", args)
+            LOGGER.debug("Subscribing to future topics: %s", args)
             await ws.subscribe(args, callback=_on_message)
             
-            LOGGER.info('OKX public websocket connected and started!')
+            LOGGER.info('OKX future public websocket connected and started!')
             
             # Keep connection alive
             while 1:
                 await asyncio.sleep(1)
         except Exception as e:
-            LOGGER.error("OKX public websocket error!")
+            LOGGER.error("OKX future public websocket error!")
             LOGGER.error(traceback.format_exc())
             LOGGER.info("Reconnecting in 5 seconds...")
             await asyncio.sleep(5)
 
-def okx_subscribe(depth_symbols: list[str], ticker_symbols: list[str]):
-    """ subscribe partial depth or ticker of given symbols
+def okx_future_subscribe(depth_symbols: list[str], ticker_symbols: list[str]):
+    """ subscribe partial depth or ticker of given symbols for future
     """
     global DEPTH_SYMBOLS, TICKER_SYMBOLS
     
@@ -237,4 +235,3 @@ def okx_subscribe(depth_symbols: list[str], ticker_symbols: list[str]):
         loop.run_until_complete(_forever_run())
     finally:
         loop.close()    # clear after loop finished
-        

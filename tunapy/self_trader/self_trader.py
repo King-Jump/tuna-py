@@ -26,10 +26,6 @@ EXCHANGE_TICKER_PREFIX = 'ticker'
 BJ_TZ = timezone(timedelta(hours=8))
 SIDES = ['BUY', 'SELL']
 
-# hook parameters for unit_test
-UNIT_TEST = True
-TEST_HOOK = {}
-
 async def _trade(ctx: dict, symbol: str, term_type:str,
                  price: str, qty: str, logger:Logger):
     side = random.choice(SIDES)
@@ -193,16 +189,6 @@ async def self_trade(
         if qty == ctx['qty']:
             qty *= 1.0001
         ctx['qty'] = qty
-
-        # unit test
-        # if UNIT_TEST:
-        #     fun_name = sys._getframe(0).f_code.co_name
-        #     if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
-        #         for var_name in TEST_HOOK[fun_name]["hooks"].keys():
-        #             TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
-        #     if TEST_HOOK[fun_name]["break"]:
-        #         return False
-
         # res : List[OrderID]
         res = await _trade(ctx, symbol, param.term_type,
                            str(round(price, price_decimals) if price_decimals else int(price)),
@@ -248,16 +234,6 @@ async def main(params: list[SelftradeParameter]):
             logger.debug("append task: self_trade with param=[%s], _prev_context=[%s], symbol=[%s]",
                          param, _prev_context[symbol], symbol)
             _last_operating_ts[symbol] = ts
-
-        # hook for unittest
-        # if UNIT_TEST:
-        #     fun_name = sys._getframe(0).f_code.co_name
-        #     _pctx = _prev_context[symbol]
-        #     if TEST_HOOK.get(fun_name) and TEST_HOOK[fun_name]["do_unit_test"]:
-        #         for var_name in TEST_HOOK[fun_name]["hooks"].keys():
-        #             TEST_HOOK[fun_name]["hooks"][var_name] = locals().get(var_name)
-        #     if TEST_HOOK[fun_name]["break"]:
-        #         break
         if tasks:
             await asyncio.gather(*tasks)
         else:
