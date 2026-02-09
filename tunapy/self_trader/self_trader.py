@@ -103,15 +103,15 @@ async def _trade(ctx: dict, symbol: str, term_type:str,
         return None
     logger.debug("selftrade trade 1: %s", orders[0])
     logger.debug("selftrade trade 2: %s", orders[1])
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     return ctx['client'].batch_make_orders(orders, symbol)
 
 async def _cancel_orders(ctx, symbol, order_id, logger: Logger):
     for _retry in range(3):
         try:
             res = ctx['client'].cancel_order(order_id, symbol)
-            # if res and res.get('code') == 200 and order_id in res['data']:
             if res.order_id == order_id:
+                logger.debug("cancel_orders: %s", order_id)
                 return True
         except Exception as e:
             logger.error("cancel_orders: %s; error: %s", order_id, e)
@@ -241,6 +241,8 @@ async def main(params: list[SelftradeParameter]):
                     passphrase=param.passphrase,
                     logger=logger,
                 )
+                ### Set client.mock = True, use mock interfaces for unittest
+                client.mock = True
                 _prev_context[symbol] = {'client': client, 'price':0, 'minute':0, 'qty':0}
             tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol], logger)))
             logger.debug("append task: self_trade with param=[%s], _prev_context=[%s], symbol=[%s]",
