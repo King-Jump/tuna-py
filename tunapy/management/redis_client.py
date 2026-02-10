@@ -13,7 +13,6 @@ if BASE_DIR not in sys.path:
 from tunapy.utils.db_util import RDB, get_int, get_float, set_float, get_dict
 
 ONE_MIN_HUNDRED_MS = 600
-EXCHANGE_TICKER_PREFIX = "ticker"
 class DATA_REDIS_CLIENT:
     """
     # fundamental API
@@ -65,7 +64,7 @@ class DATA_REDIS_CLIENT:
         # backforward to last minute
         for prev_tag in range(current_tag, current_tag - ONE_MIN_HUNDRED_MS, -1):
             tag = (prev_tag + ONE_MIN_HUNDRED_MS) % ONE_MIN_HUNDRED_MS  # prev_tag may less than zero
-            _key=f'{EXCHANGE_TICKER_PREFIX}{symbol_key}{tag}'
+            _key=f'{symbol_key}{tag}'
             t1 = cls.get_int(_key)
             if t1 and ts-ONE_MIN_HUNDRED_MS < t1 <= ts:
                 prev_ticker = cls.get_dict(f'{_key}_value')

@@ -6,6 +6,7 @@ import sys
 import time
 import random
 import asyncio
+import json
 from logging import Logger
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -122,11 +123,16 @@ async def self_trade(
     # get latest trade of following symbol
     # import pdb; pdb.set_trace()
     logger.debug("self_trade begin!")
-    # symbol_key = f'{EXCHANGE_TICKER_PREFIX}{param.follow_symbol}'
-    trade = DATA_REDIS_CLIENT.get_ticker(param.follow_symbol)
+    # binance UMfuture or portfolio margin are different type of account
+    if ctx['follow_exchange'] == "binance_UMFuture" or ctx['follow_exchange'] == "binance_portfolio_margin":
+        _exchange_prefix = "binance_future"
+    else:
+        _exchange_prefix = ctx['follow_exchange']
+    symbol_key = f'{_exchange_prefix}_{EXCHANGE_TICKER_PREFIX}{param.follow_symbol}'
+    trade = DATA_REDIS_CLIENT.get_ticker(symbol_key)
     logger.debug('%s ticker %s', param.follow_symbol, trade)
     if not trade or not trade.get('price') or not trade.get('qty'):
-        logger.warning('fail to get ticker %s', param.follow_symbol)
+        logger.warning('fail to get ticker [%s] with symbol_key %s', param.follow_symbol, symbol_key)
         return False
 
     # get current order book of self-traded symbol
@@ -147,7 +153,7 @@ async def self_trade(
     qty_decimals = param.qty_decimals
     if trade['price']:
         # copy binance trade price
-        price = trade['price']
+        price = float(trade['price'])
         # for real ticker, make little change for sequent st price
         if ctx['price'] == price:
             # this turn self-trade price = pre turn price, change a little
@@ -176,7 +182,7 @@ async def self_trade(
     qty = min(round(max(1.0 / 10 ** qty_decimals, qty), qty_decimals),
               round(float(param.max_amt_per_order) / price, qty_decimals))
     if qty > 0:
-        logger.info('put self-trade %s %s %s %s %s', symbol, price, qty, top_bid, top_ask)
+        logger.info('put self-trade %s %s %s %s %s at maker_exchange %s', symbol, price, qty, top_bid, top_ask, ctx['client'])
         # the close of minute N must equals to the open of minute N+1
         current_minute = int(int(time.time()) / 60) % 60
         if current_minute != ctx['minute']:
@@ -215,25 +221,25 @@ async def main(params: list[SelftradeParameter]):
         ts = time.time()
         tasks = []
         for param in params:
-            symbol = param.maker_symbol
+            symbol_key = f"{param.maker_exchange}_{param.maker_symbol}"
             # check self-trade frequency
-            if _last_operating_ts.get(symbol, 0) + param.interval > ts:
+            if _last_operating_ts.get(symbol_key, 0) + param.interval > ts:
                 continue
-            if symbol not in _prev_context:
+            if symbol_key not in _prev_context:
                 client = get_private_client(
-                    exchange=param.follow_exchange,
+                    exchange=param.maker_exchange,
                     api_key=param.api_key,
                     api_secret=param.api_secret,
                     passphrase=param.passphrase,
                     logger=logger,
                 )
                 ### Set client.mock = True, use mock interfaces for unittest
-                client.mock = True
-                _prev_context[symbol] = {'client': client, 'price':0, 'minute':0, 'qty':0}
-            tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol], logger)))
+                client.mock = False
+                _prev_context[symbol_key] = {'client': client, 'price':0, 'minute':0, 'qty':0, 'follow_exchange': param.follow_exchange}
+            tasks.append(asyncio.create_task(self_trade(param, _prev_context[symbol_key], logger)))
             logger.debug("append task: self_trade with param=[%s], _prev_context=[%s], symbol=[%s]",
-                         param, _prev_context[symbol], symbol)
-            _last_operating_ts[symbol] = ts
+                         param, _prev_context[symbol_key], symbol_key)
+            _last_operating_ts[symbol_key] = ts
         if tasks:
             await asyncio.gather(*tasks)
         else:
@@ -243,47 +249,13 @@ from test_env import API_KEY, SECRET, PASSPHRASE
 if __name__ == '__main__':
     """
     Reference: EXCHANGE_CHANNEL in cexapi/helper.py
-    """
-    selftrade_params = [
-        SelftradeParameter({
-            'API KEY': API_KEY,
-            'Secret': SECRET,
-            'Passphrase': PASSPHRASE,
-
-            'Follow Exchange': 'binance_spot',
-            'Follow Symbol': 'btcusdt',
-            'Maker Symbol': 'BTCUSDT',
-            'Term type': 'SPOT',
-            'Maker Price Decimals': 2,
-            'Maker Qty Decimals': 5,
-            
-            'Interval': 2,
-            'Quote Timeout': 1,
-            'Qty Multiplier': 0.8,
-            'Max Amt Per Order': 2_000,
-            'Min Qty': 0.00001,
-            'Min Amt': 10,
-            'Price Divergence': 0.02,
-        }),
-        SelftradeParameter({
-            'API KEY': API_KEY,
-            'Secret': SECRET,
-            'Passphrase': PASSPHRASE,
-            
-            'Follow Exchange': 'binance_spot',
-            'Follow Symbol': 'ethusdt',
-            'Maker Symbol': 'ETHUSDT',
-            'Term type': 'SPOT',
-            'Maker Price Decimals': 2,
-            'Maker Qty Decimals': 4,
-
-            'Interval': 2,
-            'Quote Timeout': 1,
-            'Qty Multiplier': 0.8,
-            'Max Amt Per Order': 2_000,
-            'Min Qty': 0.0001,
-            'Min Amt': 10,
-            'Price Divergence': 0.02,
-        })
-    ]
+    """    
+    if len(sys.argv) != 2:
+        print("usage: python self_trader.py <config_file>")
+        exit(1)
+    
+    config_file = sys.argv[1]
+    with open(config_file, 'r') as f:
+        _params = json.load(f)
+    selftrade_params = [SelftradeParameter(param) for param in _params]
     asyncio.run(main(selftrade_params))

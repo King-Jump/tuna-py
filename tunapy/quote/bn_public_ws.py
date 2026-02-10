@@ -17,9 +17,9 @@ from octopuspy.utils.log_util import create_logger
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # binance spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'depth'
+EXCHANGE_DEPTH_PREFIX = 'binance_spot_depth'
 # binance spot ticker
-EXCHANGE_TICKER_PREFIX = 'ticker'
+EXCHANGE_TICKER_PREFIX = 'binance_spot_ticker'
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 LOGGER = create_logger(BASE_DIR, "bn_pub_ws.log", "BN-PUBWS", 10)
