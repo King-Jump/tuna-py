@@ -30,9 +30,9 @@ BOOK_MESSAGE_BUFF = {}
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # OKX future partial depth
-EXCHANGE_FUTURE_DEPTH_PREFIX = 'future_depth'
+EXCHANGE_FUTURE_DEPTH_PREFIX = 'okx_future_depth'
 # OKX future ticker
-EXCHANGE_FUTURE_TICKER_PREFIX = 'future_ticker'
+EXCHANGE_FUTURE_TICKER_PREFIX = 'okx_future_ticker'
 
 def _key(tag, ts):
     """ OKX Future

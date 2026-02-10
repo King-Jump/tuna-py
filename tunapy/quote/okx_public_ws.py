@@ -31,9 +31,9 @@ BOOK_MESSAGE_BUFF = {}
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # OKX spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'depth'
+EXCHANGE_DEPTH_PREFIX = 'okx_spot_depth'
 # OKX spot ticker
-EXCHANGE_TICKER_PREFIX = 'ticker'
+EXCHANGE_TICKER_PREFIX = 'okx_spot_ticker'
 
 def _key(tag, ts):
     """ Okx Spot Partial Depth

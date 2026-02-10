@@ -17,9 +17,9 @@ from octopuspy.utils.log_util import create_logger
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # binance future partial depth
-EXCHANGE_FUTURE_DEPTH_PREFIX = 'future_depth'
+EXCHANGE_FUTURE_DEPTH_PREFIX = 'binance_future_depth'
 # binance future ticker
-EXCHANGE_FUTURE_TICKER_PREFIX = 'future_ticker'
+EXCHANGE_FUTURE_TICKER_PREFIX = 'binance_future_ticker'
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 LOGGER = create_logger(BASE_DIR, "bn_future_pub_ws.log", "BN-FUTURE-PUBWS", 10)
