@@ -245,7 +245,6 @@ async def main(params: list[SelftradeParameter]):
         else:
             await asyncio.sleep(0.05)
             
-from test_env import API_KEY, SECRET, PASSPHRASE
 if __name__ == '__main__':
     """
     Reference: EXCHANGE_CHANNEL in cexapi/helper.py
