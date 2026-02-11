@@ -1,12 +1,10 @@
 redis
-# supervisor
 requests
-# binance-common
 python-binance
 binance-connector
-# binance-sdk-spot
 pydantic
 binance-futures-connector
 python-okx
-# King-Jump-octopus-py
 ujson
+# King-Jump-octopus-py
+../octopus-py/

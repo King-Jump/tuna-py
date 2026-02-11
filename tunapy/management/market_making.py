@@ -3,14 +3,19 @@
 
 class TokenParameter:
     def __init__(self, conf: dict) -> None:
+        self.maker_exchange = conf['Maker Exchange']     # the exchange for Maker Account
         self.api_key = conf['API KEY']     # the API key for Maker Account
         self.api_secret = conf['Secret']   # the API secret for Maker Account
         self.passphrase = conf['Passphrase'] # the passphrase for Maker Account
 
+        self.follow_exchange = conf['Follow Exchange']     # the exchange for Follow Account
         self.follow_symbol = conf['Follow Symbol']   # the mirrored symbol
+        
         self.maker_symbol = conf['Maker Symbol']     # the mirroring symbol
+        self.term_type = conf['Term type']          # term type of maker symbol, such as "SPOT"
         self.price_decimals = int(conf['Maker Price Decimals'])      # price decimals of maker symbol
         self.qty_decimals = int(conf['Maker Qty Decimals'])          # quantity decimals of maker symbol
+        self.position_side = conf['Position Side']                  # position side of maker symbol, such as "LONG"
 
         ### far-end market making parameters
         self.far_interval = float(conf['Far Interval'])          # interval of putting new far-end orders

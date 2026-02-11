@@ -1,14 +1,18 @@
 """ Market Maker Main
 """
 import os
+from re import A
 import sys
 import time
 import traceback
 import asyncio
 from logging import Logger
+import json
 from collections import namedtuple
 
 from tunapy.management.market_making import TokenParameter
+from tunapy.cexapi.helper import get_private_client
+from octopuspy.exchange.base_restapi import NewOrder, OrderID
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 BASE_PATH = os.path.dirname(CURR_PATH)
@@ -26,10 +30,15 @@ from maker.maker_libs import (
     diff_prev_new_orders,
 )
 
+EXCHANGE_DEPTH_PREFIX = 'depth'
+BATCH_SIZE = 10
 
 async def _clear_all_open_orders(symbol: str, ctx: dict, logger: Logger):
     logger.info('Cancel all open orders of %s', symbol)
-    res = '' # TODO: cancel_all_by_symbol(symbol)
+    res=[]
+    if ctx['client']:
+        ids = ctx['client'].open_orders(symbol)
+        res = ctx['client'].batch_cancel(ids)
     if not res:
         logger.error('Can not cancel all open orders of %s', symbol)
 
@@ -39,16 +48,20 @@ async def _clear_all_ner_open_orders(symbol: str, ctx: dict, logger: Logger):
     orders = await _open_orders(ctx, symbol)
     cancell_ids = [order['orderId']
                    for order in orders if not order['clientOrderId'].startswith('F0')]
+    res = []
     if cancell_ids:
-        res = '' # cancel_orders_by_ids(cancell_ids)
+        if ctx['client']:
+            res = ctx['client'].batch_cancel(cancell_ids, symbol)
         logger.info('Cancel all near orders %s', res)
 
 
 async def _make_orders(ctx: dict, symbol: str, orders: list, logger: Logger) -> list:
     res = []
-    # TODO: get batch size from config
+    # get batch size from config
     for start in range(0, len(orders), BATCH_SIZE):
-        sub_res = '' # batch_make_orders(orders[start:start + BATCH_SIZE])
+        sub_res = []
+        if ctx['client']:
+            sub_res = ctx['client'].batch_make_orders(orders[start:start + BATCH_SIZE], symbol)
         logger.debug('Make Orders Response %s: %s', symbol, sub_res)
         res.extend(sub_res)
     return res
@@ -56,16 +69,17 @@ async def _make_orders(ctx: dict, symbol: str, orders: list, logger: Logger) -> 
 async def _cancel_orders(ctx: dict, symbol: str, cancel_ids: list, logger: Logger) -> int:
     cancel_num = 0
     for start in range(0, len(cancel_ids), BATCH_SIZE):
-        sub_res = '' # cancel_orders_by_ids(cancel_ids[start:start + BATCH_SIZE], symbol)
+        sub_res = []
+        if ctx['client']:
+            sub_res = ctx['client'].batch_cancel(cancel_ids[start:start + BATCH_SIZE], symbol)
         logger.debug("cancel_orders %s: %s", symbol, sub_res)
-        cancel_num += len([oid for oid, status in sub_res['data'].items() if status == 'SUCCESS'])
-        if sub_res.get("code") != 200:
-            logger.error("cancel_orders: %s;error: %s",
-                         cancel_ids[start:start + BATCH_SIZE], sub_res)
+        cancel_num += len(sub_res)
     return cancel_num
 
 async def _open_orders(ctx: dict, symbol: str) -> list:
-    return [] # TODO get_open_orders(symbol)
+    if ctx['client']:
+        return ctx['client'].get_open_orders(symbol)
+    return []
 
 async def handle_orders(
     param: dict,
@@ -126,10 +140,16 @@ async def handle_orders(
             order_id = item.get("orderId")
             if order_id:
                 if order.side == 'BUY':
-                    # TODO: define cancel order data structure
-                    reserve_bids.append(CachedOrder(price=order.price, id=order_id))
+                    # define cancel order data structure
+                    reserve_bids.append(
+                        OrderID(order_id=order_id, client_id="")
+                    )
+                    # reserve_bids.append(CachedOrder(price=order.price, id=order_id))
                 else:
-                    reserve_asks.append(CachedOrder(price=order.price, id=order_id))
+                    reserve_asks.append(
+                        OrderID(order_id=order_id, client_id="")
+                    )
+                    # reserve_asks.append(CachedOrder(price=order.price, id=order_id))
         if is_far:
             ctx['prev_farasks'] = reserve_asks
             ctx['prev_farbids'] = reserve_bids
@@ -151,12 +171,13 @@ async def handle_orders(
             # handle exception in batch make orders, roll-back
             listed_orders = await _open_orders(ctx, maker_symbol)
             # made_orders are orders of far-end
-            expect_ids = set([item.id for item in reserve_asks + reserve_bids])
+            expect_ids = set([item.order_id for item in reserve_asks + reserve_bids])
+            # expect_ids = set([item.id for item in reserve_asks + reserve_bids])
             # add previous near-end orders
             for co in ctx.get('prev_asks', []):
-                expect_ids.add(co.id)
+                expect_ids.add(co.order_id)
             for co in ctx.get('prev_bids', []):
-                expect_ids.add(co.id)
+                expect_ids.add(co.order_id)
             unexpected_orders = [o['orderId'] for o in listed_orders if o['orderId'] \
                                 and o['orderId'] not in expect_ids]
             if unexpected_orders:
@@ -196,7 +217,13 @@ async def market_making(
         job_start_ts = time.time()
 
         # get order book of following symbol, cached in redis
-        ask_bid = DATA_REDIS_CLIENT.get_order_book(param) # TODO
+        # binance have 2 types of future: UMFuture and portfolio_margin
+        if ctx['follow_exchange'] == "binance_UMFuture" or ctx['follow_exchange'] == "binance_portfolio_margin":
+            _exchange_prefix = "binance_future"
+        else:
+            _exchange_prefix = ctx['follow_exchange']
+        symbol_key = f'{_exchange_prefix}_{EXCHANGE_DEPTH_PREFIX}{param.follow_symbol}'
+        ask_bid = DATA_REDIS_CLIENT.get_order_book(symbol_key)
         if not ask_bid or not ask_bid.get('asks') or not ask_bid.get('bids'):
             logger.warning('Cannot get quotes of %s', maker_symbol)
             return
@@ -216,27 +243,40 @@ async def market_making(
         for price, qty in new_asks:
             if price > top_bid:  # avoid self-trade
                 valid_asks.append(
-                    # TODO: define batch order data structure
-                    BatchOrder(clorder_id=gen_client_order_id(
-                        maker_symbol, clorder_start, clorder_offset),
-                               symbol=maker_symbol,
-                               side="SELL",
-                               price=price,
-                               qty=qty,
-                               tif=param.near_tif))
+                    # batch order data structure
+                    NewOrder(
+                        symbol=maker_symbol,
+                        client_id=gen_client_order_id(
+                            maker_symbol, clorder_start, clorder_offset),
+                        side="SELL",
+                        type='LIMIT',
+                        quantity=qty,
+                        price=price,
+                        biz_type=param.term_type,
+                        tif=param.near_tif,
+                        position_side=param.position_side,
+                    )
+                )
                 clorder_offset += 1
         valid_bids = []
         top_ask = min(new_asks[0][0] if new_asks else float(ask_bid['asks'][0][0]), ctx.get('top_ask', top_bid))
         for price, qty in new_bids:
             if price < top_ask:
                 valid_bids.append(
-                    BatchOrder(clorder_id=gen_client_order_id(
-                        maker_symbol, clorder_start, clorder_offset),
-                               symbol=maker_symbol,
-                               side="BUY",
-                               price=price,
-                               qty=qty,
-                               tif=param.near_tif))
+                    # batch order data structure
+                    NewOrder(
+                        symbol=maker_symbol,
+                        client_id=gen_client_order_id(
+                            maker_symbol, clorder_start, clorder_offset),
+                        side="BUY",
+                        type='LIMIT',
+                        quantity=qty,
+                        price=price,
+                        biz_type=param.term_type,
+                        tif=param.near_tif,
+                        position_side=param.position_side,
+                    )
+                )
                 clorder_offset += 1
         # put orders via exchange restful API
         await handle_orders(param, maker_symbol, valid_asks, valid_bids, ctx, logger, False)
@@ -294,7 +334,14 @@ async def main(params: list[TokenParameter]):
 
                 if symbol not in _prev_context:
                     _prev_context[symbol] = {
-                        'client': '',       # TODO Rest API Client for order operations
+                        'client': get_private_client(
+                            exchange=param.maker_exchange,
+                            api_key=param.api_key,
+                            api_secret=param.api_secret,
+                            passphrase=param.passphrase,
+                            logger=logger,
+                        ),
+                        'follow_exchange': param.follow_exchange,   # used to create get_ticker key
                         'prev_asks': [],    # previous made ask orders, near-end
                         'prev_bids': [],    # previous made bid orders, near-end
                         'prev_farasks': [],    # previous made ask orders, far-end
@@ -317,13 +364,15 @@ async def main(params: list[TokenParameter]):
 
 
 if __name__ == '__main__':
-    params = [
-        TokenParameter({{
-            'Maker Symbol': 'btc_usdt'
-        }}),
-        TokenParameter({{
-            'Maker Symbol': 'dot_usdt'
-        }})
-    ]
-
+    if len(sys.argv) != 2:
+        print("Usage: python market_maker.py <config_file>")
+        sys.exit(1)
+    _config_file = sys.argv[1]
+    try:
+        with open(_config_file, 'r') as f:
+            args = json.load(f)
+    except Exception:
+        print(f"Error: failed to load config file {_config_file}")
+        sys.exit(1)
+    params = [TokenParameter(item) for item in args]
     asyncio.run(main(params))

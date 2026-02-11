@@ -28,8 +28,6 @@ class DATA_REDIS_CLIENT:
     def get_int(cls, key: str) -> int:
         """ get int value
         """
-        # import pdb; pdb.set_trace()
-        # print("DATA_REDIS_CLIENT.get_int: key=", key)
         return get_int(key)
 
     @classmethod
@@ -69,6 +67,22 @@ class DATA_REDIS_CLIENT:
             if t1 and ts-ONE_MIN_HUNDRED_MS < t1 <= ts:
                 prev_ticker = cls.get_dict(f'{_key}_value')
                 if prev_ticker:
-                    return prev_ticker  # nearest order_book
-        return None # fail to get previous order_book
+                    return prev_ticker  # nearest ticker
+        return None # fail to get previous ticker
     
+    @classmethod
+    def get_order_book(cls, symbol_key:str):
+        """ get order book
+        """
+        ts = int(time.time()*10)
+        current_tag = ts % ONE_MIN_HUNDRED_MS
+        # backforward to last minute
+        for prev_tag in range(current_tag, current_tag - ONE_MIN_HUNDRED_MS, -1):
+            tag = (prev_tag + ONE_MIN_HUNDRED_MS) % ONE_MIN_HUNDRED_MS  # prev_tag may less than zero
+            _key=f'{symbol_key}{tag}'
+            t1 = cls.get_int(_key)
+            if t1 and ts-ONE_MIN_HUNDRED_MS < t1 <= ts:
+                prev_order_book = cls.get_dict(f'{_key}_value')
+                if prev_order_book:
+                    return prev_order_book  # nearest order_book
+        return None # fail to get previous order_book

@@ -7,7 +7,7 @@ from redis import ConnectionPool
 from functools import lru_cache
 
 REDIS_CONFIG = {
-    "host": "127.0.0.1", "port": 6379, "password": "",
+    "host": "127.0.0.1", "port": 6379, "password": "123456",
     "max_connections": 5,
     "socket_connect_timeout": 1,
     "health_check_interval": 30,

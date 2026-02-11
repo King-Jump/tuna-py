@@ -1,0 +1,44 @@
+[
+    {
+        "Maker Exchange": "bifu_spot",
+        "Maker Symbol": "90000005",
+        "API KEY": "Your API KEY",
+        "Secret": "Your API SECRET",
+        "Passphrase": "Your Passphrase",
+
+        "Follow Exchange": "binance_spot",
+        "Follow Symbol": "bnbusdt",
+        "Term type": "SPOT",
+        "Maker Price Decimals": 2,
+        "Maker Qty Decimals": 3,
+        
+        "Interval": 1,
+        "Quote Timeout": 100,
+        "Qty Multiplier": 0.95,
+        "Max Amt Per Order": 100000,
+        "Min Qty": 0.00001,
+        "Min Amt": 5,
+        "Price Divergence": 200
+    },
+    {
+        "Maker Exchange": "bifu_future",
+        "Maker Symbol": "",
+        "API KEY": "Your API KEY",
+        "Secret": "Your API SECRET",
+        "Passphrase": "Your Passphrase",
+
+        "Follow Exchange": "binance_UMFuture",
+        "Follow Symbol": "bnbusdt",
+        "Term type": "FUTURE",
+        "Maker Price Decimals": 2,
+        "Maker Qty Decimals": 3,
+        
+        "Interval": 1,
+        "Quote Timeout": 100,
+        "Qty Multiplier": 0.95,
+        "Max Amt Per Order": 100000,
+        "Min Qty": 0.00001,
+        "Min Amt": 5,
+        "Price Divergence": 200
+    }
+]

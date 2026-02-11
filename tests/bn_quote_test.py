@@ -19,7 +19,7 @@ from colorful_test import (
 from tunapy.self_trader.self_trader import EXCHANGE_TICKER_PREFIX
 from tunapy.management.redis_client import DATA_REDIS_CLIENT
 
-SYMBOL = 'ethusdt'
+SYMBOL = 'BNBUSDT'
 TEST_LOOPS = 100
 INTERMEDIATE_RESULT = {}
 ONE_MIN_HUNDRED_MS = 600

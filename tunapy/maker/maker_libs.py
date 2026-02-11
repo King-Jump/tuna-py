@@ -4,8 +4,8 @@ import time
 import logging
 import random
 
-from common.cexapi.restful_api import BatchOrder
 from tunapy.management.market_making import TokenParameter
+from octopuspy.exchange.base_restapi import NewOrder
 
 LOGGER = logging.getLogger('MM')
 
@@ -96,26 +96,38 @@ def gen_far_liquidity(symbol: str,
         for price, qty in new_orders:
             # avoid self-trade
             if price < guard_price:
-                orders.append(BatchOrder(clorder_id=gen_client_order_id(
-                        f'B{symbol}', cl_order_start, offset, True),
-                              symbol=symbol,
-                              side="BUY",
-                              price=price,
-                              qty=qty,
-                              tif=tif))
+                orders.append(
+                    NewOrder(
+                        symbol=symbol,
+                        client_id=gen_client_order_id(f'B{symbol}', cl_order_start, offset, True),
+                        side="BUY",
+                        type='LIMIT',
+                        quantity=qty,
+                        price=price,
+                        biz_type=param.term_type,
+                        tif=tif,
+                        position_side=param.position_side,
+                    )
+                )
                 offset += 1
     else:
         new_orders = _gen_ask_orders_far(askbids['asks'], param)
         for price, qty in new_orders:
             # avoid self-trade
             if price > guard_price:
-                orders.append(BatchOrder(clorder_id=gen_client_order_id(
-                        f'S{symbol}', cl_order_start, offset, True),
-                              symbol=symbol,
-                              side="SELL",
-                              price=price,
-                              qty=qty,
-                              tif=tif))
+                orders.append(
+                    NewOrder(
+                        symbol=symbol,
+                        client_id=gen_client_order_id(f'S{symbol}', cl_order_start, offset, True),
+                        side="SELL",
+                        type='LIMIT',
+                        quantity=qty,
+                        price=price,
+                        biz_type=param.term_type,
+                        tif=tif,
+                        position_side=param.position_side,
+                    )
+                )
                 offset += 1
     return orders
 

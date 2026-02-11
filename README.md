@@ -4,7 +4,6 @@
 ```
 pip install -e ../octopus-py/
 ```
-
 ### Debug
 ```python
 class BinanceWebsocketClient:
@@ -25,4 +24,8 @@ class BinanceWebsocketClient:
         timeout = None,
         time_unit = None,
     ):
+```
+### Bifu symbolId
+```
+https://api.bifu.co/api/v1/public/meta/getMetaData
 ```
