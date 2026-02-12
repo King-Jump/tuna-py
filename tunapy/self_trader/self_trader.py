@@ -44,10 +44,7 @@ async def _trade(ctx: dict, symbol: str, term_type:str,
                 price=price,
                 biz_type="SPOT",
                 tif='GTX',
-                reduce_only=False,
                 position_side='',
-                bait=False,
-                selftrade_enabled=False,
             ),
             NewOrder(
                 symbol=symbol,
@@ -58,10 +55,7 @@ async def _trade(ctx: dict, symbol: str, term_type:str,
                 price=price,
                 biz_type="SPOT",
                 tif='IOC',
-                reduce_only=False,
                 position_side='',
-                bait=False,
-                selftrade_enabled=False,
             )
         ]
     elif term_type == 'FUTURE':
@@ -75,10 +69,7 @@ async def _trade(ctx: dict, symbol: str, term_type:str,
                 price=price,
                 biz_type="FUTURE",
                 tif='GTX',
-                reduce_only=False,
                 position_side='LONG' if side == 'SELL' else 'SHORT',
-                bait=False,
-                selftrade_enabled=False,
             ),
             NewOrder(
                 symbol=symbol,
@@ -89,10 +80,7 @@ async def _trade(ctx: dict, symbol: str, term_type:str,
                 price=price,
                 biz_type="FUTURE",
                 tif='IOC',
-                reduce_only=False,
                 position_side='SHORT' if side == 'SELL' else 'LONG',
-                bait=False,
-                selftrade_enabled=False,
             )
         ]
     else:
