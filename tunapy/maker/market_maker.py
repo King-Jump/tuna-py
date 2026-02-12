@@ -10,18 +10,20 @@ from logging import Logger
 import json
 from collections import namedtuple
 
-from tunapy.management.market_making import TokenParameter
-from tunapy.cexapi.helper import get_private_client
-from octopuspy.exchange.base_restapi import NewOrder, OrderID
-
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-BASE_PATH = os.path.dirname(CURR_PATH)
+if CURR_PATH not in sys.path:
+    sys.path.insert(0, CURR_PATH)
+BASE_PATH = os.path.dirname(os.path.dirname(CURR_PATH))
 if BASE_PATH not in sys.path:
     sys.path.insert(0, BASE_PATH)
 
+from octopuspy.exchange.base_restapi import NewOrder
 from octopuspy.utils.log_util import create_logger
+
+from tunapy.management.market_making import TokenParameter
 from tunapy.management.redis_client import DATA_REDIS_CLIENT
-from maker.maker_libs import (
+from tunapy.cexapi.helper import get_private_client
+from tunapy.maker.maker_libs import (
     gen_ask_orders,
     gen_bid_orders,
     gen_client_order_id,
@@ -32,6 +34,9 @@ from maker.maker_libs import (
 
 EXCHANGE_DEPTH_PREFIX = 'depth'
 BATCH_SIZE = 10
+
+# CachedOrder class for storing order information with price and id
+CachedOrder = namedtuple('CachedOrder', ['price', 'id'])
 
 async def _clear_all_open_orders(symbol: str, ctx: dict, logger: Logger):
     logger.info('Cancel all open orders of %s', symbol)
@@ -46,8 +51,8 @@ async def _clear_all_open_orders(symbol: str, ctx: dict, logger: Logger):
 async def _clear_all_ner_open_orders(symbol: str, ctx: dict, logger: Logger):
     logger.info("Cancel all ner open orders of %s", symbol)
     orders = await _open_orders(ctx, symbol)
-    cancell_ids = [order['orderId']
-                   for order in orders if not order['clientOrderId'].startswith('F0')]
+    cancell_ids = [order.order_id
+                   for order in orders if (hasattr(order, 'client_id') and not order.client_id.startswith('F0'))]
     res = []
     if cancell_ids:
         if ctx['client']:
@@ -78,11 +83,11 @@ async def _cancel_orders(ctx: dict, symbol: str, cancel_ids: list, logger: Logge
 
 async def _open_orders(ctx: dict, symbol: str) -> list:
     if ctx['client']:
-        return ctx['client'].get_open_orders(symbol)
+        return ctx['client'].open_orders(symbol)
     return []
 
 async def handle_orders(
-    param: dict,
+    param: TokenParameter,
     maker_symbol: str,
     ask_orders: list,
     bid_orders: list,
@@ -96,17 +101,16 @@ async def handle_orders(
     top_bid = bid_orders[0].price if bid_orders else 0
     top_ask = ask_orders[0].price if ask_orders else sys.maxsize
 
-    # previous listed ask/bid orders, prev_asks/prev_bids are instance of CachedOrder
     prev_asks = ctx.get('prev_farasks', []) if is_far else ctx.get('prev_asks', [])
     prev_bids = ctx.get('prev_farbids', []) if is_far else ctx.get('prev_bids', [])
     # the number of rounds without forcely refresh
     no_force_refresh_num = ctx.get('no_force_refresh_num', 0)
 
     # max difference between prices of sequent rounds
-    diff_rate_per_round = float(param.get('diff_rate_per_round', 0))
+    diff_rate_per_round = float(param.near_diff_rate_per_round)
     # diff_rate_per_round in BPS
     diff_rate_per_round *= 0.0001
-    force_refresh_num = int(param.get('change_after_n_rounds', 6))
+    force_refresh_num = int(param.force_refresh_num)
 
     # order ids to be canceled
     cancel_ids = []
@@ -137,19 +141,17 @@ async def handle_orders(
         # First put new orders, then cancel previous orders
         made_orders = await _make_orders(ctx, maker_symbol, mix_new_orders, logger)
         for order, item in zip(mix_new_orders, made_orders):
-            order_id = item.get("orderId")
+            order_id = item.order_id
             if order_id:
                 if order.side == 'BUY':
                     # define cancel order data structure
                     reserve_bids.append(
-                        OrderID(order_id=order_id, client_id="")
+                        CachedOrder(price=order.price, id=order_id)
                     )
-                    # reserve_bids.append(CachedOrder(price=order.price, id=order_id))
                 else:
                     reserve_asks.append(
-                        OrderID(order_id=order_id, client_id="")
+                        CachedOrder(price=order.price, id=order_id)
                     )
-                    # reserve_asks.append(CachedOrder(price=order.price, id=order_id))
         if is_far:
             ctx['prev_farasks'] = reserve_asks
             ctx['prev_farbids'] = reserve_bids
@@ -171,13 +173,12 @@ async def handle_orders(
             # handle exception in batch make orders, roll-back
             listed_orders = await _open_orders(ctx, maker_symbol)
             # made_orders are orders of far-end
-            expect_ids = set([item.order_id for item in reserve_asks + reserve_bids])
-            # expect_ids = set([item.id for item in reserve_asks + reserve_bids])
+            expect_ids = set([item.id for item in reserve_asks + reserve_bids])
             # add previous near-end orders
             for co in ctx.get('prev_asks', []):
-                expect_ids.add(co.order_id)
+                expect_ids.add(co.id)
             for co in ctx.get('prev_bids', []):
-                expect_ids.add(co.order_id)
+                expect_ids.add(co.id)
             unexpected_orders = [o['orderId'] for o in listed_orders if o['orderId'] \
                                 and o['orderId'] not in expect_ids]
             if unexpected_orders:
@@ -218,12 +219,14 @@ async def market_making(
 
         # get order book of following symbol, cached in redis
         # binance have 2 types of future: UMFuture and portfolio_margin
-        if ctx['follow_exchange'] == "binance_UMFuture" or ctx['follow_exchange'] == "binance_portfolio_margin":
-            _exchange_prefix = "binance_future"
-        else:
-            _exchange_prefix = ctx['follow_exchange']
-        symbol_key = f'{_exchange_prefix}_{EXCHANGE_DEPTH_PREFIX}{param.follow_symbol}'
+        exchange_mapping = {
+            "binance_UMFuture": "binance_future",
+            "binance_portfolio_margin": "binance_future"
+        }
+        _exchange_prefix = exchange_mapping.get(ctx['follow_exchange'], ctx['follow_exchange'])
+        symbol_key = f'{_exchange_prefix}_{EXCHANGE_DEPTH_PREFIX}{param.follow_symbol.lower()}'
         ask_bid = DATA_REDIS_CLIENT.get_order_book(symbol_key)
+        logger.debug("get orderbook of key [%s]: %s", symbol_key, ask_bid)
         if not ask_bid or not ask_bid.get('asks') or not ask_bid.get('bids'):
             logger.warning('Cannot get quotes of %s', maker_symbol)
             return
@@ -307,7 +310,7 @@ async def market_making(
 async def main(params: list[TokenParameter]):
     """ The main function
     """
-    logger = create_logger(CURR_PATH, f"market_making.log", 'MM')
+    logger = create_logger(BASE_PATH, f"market_making.log", 'MM')
     logger.info('start market maker with config: %s', params)
 
     _last_operating_ts = {}  # the timestamp of last making orders for each pair
@@ -323,7 +326,7 @@ async def main(params: list[TokenParameter]):
                 if symbol not in _last_operating_ts:
                     _last_operating_ts[symbol] = {'near_opts': 0.0, 'far_opts': 0.0}
                 op_ts = _last_operating_ts[symbol]
-                if op_ts['near_opts'] + param['interval'] > ts:
+                if op_ts['near_opts'] + param.near_interval > ts:
                     continue
                 _last_operating_ts[symbol]['near_opts'] = ts
 
@@ -333,14 +336,16 @@ async def main(params: list[TokenParameter]):
                     is_far = True
 
                 if symbol not in _prev_context:
+                    client = get_private_client(exchange=param.maker_exchange,
+                                                api_key=param.api_key,
+                                                api_secret=param.api_secret,
+                                                passphrase=param.passphrase,
+                                                logger=logger,
+                                                )
+                    # use mock interface for fast testing
+                    client.mock = True
                     _prev_context[symbol] = {
-                        'client': get_private_client(
-                            exchange=param.maker_exchange,
-                            api_key=param.api_key,
-                            api_secret=param.api_secret,
-                            passphrase=param.passphrase,
-                            logger=logger,
-                        ),
+                        'client': client,
                         'follow_exchange': param.follow_exchange,   # used to create get_ticker key
                         'prev_asks': [],    # previous made ask orders, near-end
                         'prev_bids': [],    # previous made bid orders, near-end

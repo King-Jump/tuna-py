@@ -40,7 +40,7 @@ def _mirror_ask_orders(
             break
         order_price = ask * price_coef
         order_price = round(order_price, price_decimals) if price_decimals else int(order_price)
-        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param)
+        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param, False)
         if order_qty > 0:
             new_orders.append((order_price, order_qty))
             count += 1
@@ -62,15 +62,15 @@ def _mirror_bid_orders(
             break
         order_price = bid * price_coef
         order_price = round(order_price, price_decimals) if price_decimals else int(order_price)
-        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param)
+        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param, False)
         if order_qty > 0:
             new_orders.append((order_price, order_qty))
             count += 1
 
     return new_orders
 
-def _calc_maker_qty(order_price: float, order_qty: float, param: TokenParameter):
-    max_amt_per_order = float(param.max_amt_per_order)
+def _calc_maker_qty(order_price: float, order_qty: float, param: TokenParameter, is_far: bool = False):
+    max_amt_per_order = float(param.far_max_amt_per_order) if is_far else float(param.near_max_amt_per_order)
     if order_qty * order_price > max_amt_per_order:
         order_qty = max_amt_per_order / order_price
     qty_decimals = param.qty_decimals
@@ -154,7 +154,7 @@ def _spread_far(
         qty = qtys[rand_idx] * (0.95 + rand_idx * 0.05 / qty_size)
 
         order_price = round(base_price, price_decimals) if price_decimals else int(base_price)
-        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param)
+        order_qty = _calc_maker_qty(order_price, qty * qty_coef, param, True)
         if order_qty > 0:
             new_orders.append((order_price, order_qty))
     return new_orders
