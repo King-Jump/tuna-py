@@ -343,7 +343,7 @@ async def main(params: list[TokenParameter]):
                                                 logger=logger,
                                                 )
                     # use mock interface for fast testing
-                    client.mock = True
+                    # client.mock = True
                     _prev_context[symbol] = {
                         'client': client,
                         'follow_exchange': param.follow_exchange,   # used to create get_ticker key
