@@ -13,7 +13,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from octopuspy.utils.log_util import create_logger
-from management.redis_client import DATA_REDIS_CLIENT
+from tunapy.quote.redis_client import DATA_REDIS_CLIENT
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 LOGGER = create_logger(BASE_DIR, "okx_future_pub_ws.log", "OKX-FUTURE-PUBWS", 10)

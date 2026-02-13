@@ -11,7 +11,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
     
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
-from tunapy.management.redis_client import DATA_REDIS_CLIENT
+from tunapy.quote.redis_client import DATA_REDIS_CLIENT
 from octopuspy.utils.log_util import create_logger
 
 # one munite = 600 * 100 ms

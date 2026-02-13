@@ -21,7 +21,7 @@ from octopuspy.exchange.base_restapi import NewOrder
 from octopuspy.utils.log_util import create_logger
 
 from tunapy.management.market_making import TokenParameter
-from tunapy.management.redis_client import DATA_REDIS_CLIENT
+from tunapy.quote.redis_client import DATA_REDIS_CLIENT
 from tunapy.cexapi.helper import get_private_client
 from tunapy.maker.maker_libs import (
     gen_ask_orders,

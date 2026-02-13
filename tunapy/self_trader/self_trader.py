@@ -17,7 +17,7 @@ if BASE_DIR not in sys.path:
 from octopuspy.utils.log_util import create_logger
 from octopuspy.exchange.base_restapi import AskBid, NewOrder
 from tunapy.management.self_trade import TokenParameter as SelftradeParameter
-from tunapy.management.redis_client import DATA_REDIS_CLIENT
+from tunapy.quote.redis_client import DATA_REDIS_CLIENT
 from tunapy.cexapi.helper import get_private_client
 
 # OKX spot partial depth
