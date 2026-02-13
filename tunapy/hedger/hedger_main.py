@@ -22,7 +22,6 @@ class HedgerAgent():
         api_key: str,
         api_secret: str,
         logger: Logger,
-        reporter: Logger,
         monitor: Logger,
         config: TokenParameter,
         ws_client: PrivateWSClient,
@@ -33,8 +32,6 @@ class HedgerAgent():
 
         # logger for application workflow
         self.logger = logger
-        # logger for strategy report including trade
-        self.reporter = reporter
         # logger for hedge monitor, including ws message, bn hedge order, hedged result
         self.monitor = monitor
 
@@ -47,7 +44,6 @@ class HedgerAgent():
         # multi-threads for hedging
         self._hedge_pool = ThreadPoolExecutor(10)
         self._hedge_tasks = {}
-        self._hedger_client = {}
 
         # stop flag
         self._stop = False
@@ -224,10 +220,9 @@ class HedgerAgent():
                 hedge_price = hedge_amt / hedge_qty
                 self.monitor.info("Pre-Hedge %s: client_orderid=%s, position=%s",
                                   symbol, cl_order_id, position)
-                future = self._hedge_pool.submit(fast_hedge, self._hedge_client,
-                                                 hedge_strategy, cl_order_id,
+                future = self._hedge_pool.submit(instant_hedge, hedge_strategy, cl_order_id,
                                                  abs(hedge_amt), hedge_side, abs(hedge_qty),
-                                                 hedge_price, self.app_name, self.logger)
+                                                 hedge_price, self.logger)
                 hedge_time = int(time.time() * 1000)
                 self.logger.info("[p:hedger-process]%s:%s",
                                  symbol, hedge_time - self._hedge_prformance.get(symbol, 0))
@@ -270,9 +265,8 @@ class HedgerAgent():
                         continue
 
                     # task finished
-                    hedge_order_id, pnl, fx_msg = task.result()
-                    self.monitor.info('Hedge result %s: %s, %s, %s, %s',
-                                      symbol, cl_order_id, hedge_order_id, pnl, fx_msg)
+                    hedge_order_id = task.result()
+                    self.monitor.info('Hedge result %s: %s, %s', symbol, cl_order_id, hedge_order_id)
                     if not hedge_order_id:
                         # invalid hedge
                         continue
@@ -287,12 +281,6 @@ class HedgerAgent():
                     if self._hedger_exchchage == EXCHANGE_BN:
                         res = self._hedge_client.order_status(order_id=hedge_order_id,
                                                               symbol=hedge_symbol)
-                    #{'symbol': 'ETHUSDT', 'orderId': 34508897958, 'clientOrderId': 'JPM_ETHUSDT_20320_1',
-                    # 'price': '4351.87000000', 'origQty': '0.00570000', 'executedQty': '0.00570000',
-                    #  'cummulativeQuoteQty': '24.56990700', 'status': 'FILLED', 'timeInForce': 'IOC',
-                    #  'type': 'LIMIT', 'side': 'BUY', 'stopPrice': '0.00000000', 'icebergQty': '0.00000000',
-                    #  'time': 1755707192366, 'updateTime': 1755707192366, 'isWorking': True, 'accountId': 355516976,
-                    #  'selfTradePreventionMode': 'EXPIRE_MAKER', 'preventedMatchId': None, 'preventedQuantity': None}
                     if 'status' not in res:
                         # hedge order fatal error
                         send_maker_message('', {
@@ -301,45 +289,8 @@ class HedgerAgent():
                         del self._hedge_tasks[cl_order_id]
                         continue
 
-                    # Action,ClientOrderId,Symbol,Side,AvgPrice,Qty,ExecQty,ExecAmt,Forex
-                    pnl_rate, avg_price, total_amt = 0.0, 0.0, float(res.get('cummulativeQuoteQty', 0))
-                    if total_amt > 0:
-                        pnl_rate = 10000 * pnl / total_amt
-                        avg_price = total_amt / float(res.get('executedQty', 1))
-                    self.reporter.info("Hedger,%s,%s,%s,,%s,%s,%s,%s,%s",
-                                       cl_order_id, hedge_symbol, res['side'], avg_price,
-                                       res['origQty'], res['executedQty'], total_amt, pnl_rate)
-                    self.monitor.info('Hedged %s: client_orderid=%s, %s %s @ %s',
-                                      symbol, cl_order_id, res['side'], res['executedQty'], avg_price)
-
-                    # track profit or loss
-                    if symbol not in self._track_profit:
-                        self._track_profit[symbol] = {
-                            'BUY': {
-                                'pre_pnl': 0, 'pre_far_pnl': '',
-                                'pre_ts': 0, 'pre_far_ts': 0,
-                                'loss_acc_cnt': 0, 'loss_far_acc_cnt': 0,
-                            }, 'SELL': {
-                                'pre_pnl': 0, 'pre_far_pnl': '',
-                                'pre_ts': 0, 'pre_far_ts': 0,
-                                'loss_acc_cnt': 0, 'loss_far_acc_cnt': 0,
-                            }
-                        }
-                    track = self._track_profit[symbol]['SELL' if res['side'] == 'BUY' else 'BUY']
-                    if cl_order_id.startswith('F_'):
-                        track['pre_far_pnl'] = pnl
-                        track['pre_far_ts'] = time.time()
-                        if pnl > 0:
-                            track['loss_far_acc_cnt'] = max(0, track['loss_far_acc_cnt'] - 1)
-                        else:
-                            track['loss_far_acc_cnt'] += 1
-                    else:
-                        track['pre_pnl'] = pnl
-                        track['pre_ts'] = time.time()
-                        if pnl > 0:
-                            track['loss_far_acc_cnt'] = max(0, track['loss_far_acc_cnt'] - 1)
-                        else:
-                            track['loss_acc_cnt'] += 1
+                    self.monitor.info('Hedged %s: client_orderid=%s, %s %s',
+                                      symbol, cl_order_id, res['side'], res['executedQty'])
 
                     if cl_order_id in self._hedge_tasks:
                         del self._hedge_tasks[cl_order_id]
@@ -409,14 +360,13 @@ def main(param: TokenParameter, ws_client: PrivateWSClient):
     logger.info('start hedger with config: %s', param)
 
     monitor = create_logger(CURR_PATH, "HedgeMonitor.log", f'monitor_hedger', backup_cnt=50)
-    reporter = create_logger(CURR_PATH, f"report_hedger.csv", f'report_hedger', backup_cnt=100)
 
     if not HEDGE_API_KEY or not HEDGE_API_SECRET:
         logger.error("Lost Hedge api key or secret")
         return
 
     with HedgerAgent(api_key=HEDGE_API_KEY, api_secret=HEDGE_API_SECRET,
-                    logger=logger, reporter=reporter, monitor=monitor,
+                    logger=logger, monitor=monitor,
                     config=param, ws_client=ws_client) as agent:
         agent.run_forever()
 
