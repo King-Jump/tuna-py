@@ -1,6 +1,10 @@
 """ Parameters for hedging
 """
 
+from collections import namedtuple
+from logging import Logger
+
+
 class TokenParameter:
     def __init__(self, conf: dict) -> None:
         self.api_key = conf['API KEY']     # the API key for Maker Account
@@ -8,8 +12,9 @@ class TokenParameter:
         self.passphrase = conf['Passphrase'] # the passphrase for Maker Account
 
         self.stream_url = conf['Stream URL']     # the stream url for private websocket
-        self.maker_symbol = conf['Maker Symbol']     # the mirroring symbol
+        self.maker_symbol = conf['Maker Symbol']     # the maker symbol
         self.hedge_symbol = conf['Hedge Symbol']     # the hedge symbol
+        self.hedge_exchange = conf['Hedge Exchange']  # the hedge exchange
         self.price_decimals = int(conf['Hedger Price Decimals'])      # price decimals of hedger symbol
         self.qty_decimals = int(conf['Hedger Qty Decimals'])          # quantity decimals of hedger symbol
 
@@ -18,11 +23,12 @@ class TokenParameter:
         self.slippage = max(float(conf['Slippage']), 1.0)           # slippage for hedging
 
 class PrivateWSClient:
-    def __init__(self, api_key: str, api_secret: str, passphrase: str, stream_url: str) -> None:
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.passphrase = passphrase
-        self.stream_url = stream_url
+    def __init__(self, config: dict, logger:Logger) -> None:
+        self.api_key = config.get('API KEY', '')
+        self.api_secret = config.get('Secret', '')
+        self.passphrase = config.get('Passphrase', '')
+        self.stream_url = config.get('Stream URL', '')
+        self.logger = logger  # Logger
 
         # callbacks
         self.on_open = None
@@ -30,13 +36,14 @@ class PrivateWSClient:
         self.handle_trade_filled = None
         self.on_error = None
 
-    def start(self, symbol, on_open, on_close, on_error, handle_trade_filled):
+    def start(self, symbol, on_open, on_close, handle_trade_filled, on_error):
         self.on_open = on_open
         self.on_close = on_close
         self.on_error = on_error
         self.handle_trade_filled = handle_trade_filled
-
         self.subscribe_execution_report(symbol)
 
     def subscribe_execution_report(self, symbol: str):
         raise NotImplementedError("subscribe_execution_report not implemented")
+
+FilledOrder = namedtuple("FilledOrder", ["trade_id", "qty", "amount", "symbol", "side", "order_id", "match_time"])

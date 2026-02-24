@@ -2,15 +2,104 @@
 """
 import os
 import sys
+import json
+import time
+import traceback
+from logging import Logger
+from concurrent.futures import ThreadPoolExecutor
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
-BASE_PATH = os.path.dirname(CURR_PATH)
+BASE_PATH = os.path.dirname(os.path.dirname(CURR_PATH))
 if BASE_PATH not in sys.path:
     sys.path.insert(0, BASE_PATH)
 
-from env import HEDGE_API_KEY, HEDGE_API_SECRET
+from tunapy.utils.config_util import load_config
+# from env import HEDGE_API_KEY, HEDGE_API_SECRET
 from octopuspy.utils.log_util import create_logger
-from management.hedging import PrivateWSClient, TokenParameter
+from octopuspy.exchange.base_restapi import NewOrder, OrderStatus
+from tunapy.management.hedging import PrivateWSClient, TokenParameter, FilledOrder
+from tunapy.hedger.bifu_private_ws import BiFuPrivateWSClient
+from tunapy.cexapi.helper import get_private_client
+
+# Exchange constants
+EXCHANGE_BN = "binance"
+EXCHANGE_OKX = "okx"
+
+# Hedge execution function
+def instant_hedge(
+    hedge_client,
+    hedge_strategy: dict,
+    cl_order_id: int,
+    hedge_side: str,
+    hedge_qty: float,
+    hedge_price: float,
+    logger
+) -> str:
+    """ Execute hedge operation
+    Args:
+        hedge_client: Hedge client instance
+        hedge_strategy: Hedge strategy configuration
+        cl_order_id: Client order ID
+        hedge_side: Hedge direction (BUY/SELL)
+        hedge_qty: Hedge quantity
+        hedge_price: Hedge price
+        logger: Logger
+    
+    Returns:
+        str: Hedge order ID
+    """
+    hedge_symbol = hedge_strategy['symbol']
+    
+    logger.info('Hedge %s, %s %s %s @ %s',
+                cl_order_id, hedge_side, hedge_qty, hedge_symbol, hedge_price)
+
+    if not hedge_symbol:
+        logger.error('Hedge symbol is empty')
+        return ''
+
+    try:
+        if not hedge_client:
+            logger.error('Hedge client is None')
+            return ''
+        
+        logger.info('Executing hedge for %s', hedge_symbol)
+        
+        # 创建 NewOrder 对象
+        new_order = NewOrder(
+            symbol=hedge_symbol,
+            client_id=cl_order_id,
+            side=hedge_side,
+            type='LIMIT',
+            quantity=hedge_qty,
+            price=hedge_price,
+            biz_type='SPOT',
+            tif='GTC',
+            position_side=''
+        )
+        
+        logger.info('Creating hedge order: %s', new_order)
+        
+        # 使用 batch_make_orders 方法执行对冲
+        try:
+            order_ids = hedge_client.batch_make_orders(
+                orders=[new_order],
+                symbol=hedge_symbol
+            )
+            
+            logger.info('Hedge order created successfully: %s', order_ids)
+            
+            # 从响应中获取订单ID
+            if order_ids and len(order_ids) > 0:
+                return order_ids[0].order_id
+            else:
+                logger.error('Empty response from batch_make_orders')
+                return ''
+        except Exception as e:
+            logger.error('Hedge execution failed: %s', traceback.format_exc())
+            return ''
+    except Exception as e:
+        logger.error('Hedge execution failed: %s', traceback.format_exc())
+        return ''
 
 class HedgerAgent():
     """The agent for BiFu hedging of risk positions
@@ -18,7 +107,6 @@ class HedgerAgent():
 
     def __init__(
         self,
-        stream_url: str,
         api_key: str,
         api_secret: str,
         logger: Logger,
@@ -37,7 +125,9 @@ class HedgerAgent():
 
         # hedge strategy config
         self.config = config
-        self._hedge_client = None # TODO client for hedge exchange
+        
+        # 初始化对冲客户端
+        self._init_hedge_client()
 
         # hedge strategy related data structure
         self._risk_positions = {}
@@ -48,8 +138,17 @@ class HedgerAgent():
         # stop flag
         self._stop = False
 
-        self._ws_clients = ws_client # TODO  WS client for listening trade events
-        self._ws_clients.start(    # TODO start ws client
+        # performance tracking
+        # self._hedge_prformance = {}
+
+        # application name
+        self.app_name = "hedger"
+
+        # reporter
+        self.reporter = logger
+
+        self._ws_clients = ws_client # WS client for listening trade events
+        self._ws_clients.start(    # start ws client
             self.config.maker_symbol,
             self.on_open,
             self.on_close,
@@ -58,7 +157,6 @@ class HedgerAgent():
 
         # deduplicate of trade id
         self._trade_ids = {}
-
 
     def __enter__(self):
         return self
@@ -92,11 +190,35 @@ class HedgerAgent():
         """
         self.logger.error('WS on_error, error: %s', error)
 
-    def handle_trade_filled(self, data: dict):
+    def _init_hedge_client(self):
+        """ Initialize hedge client
+        """
+        try:
+            # Get hedge exchange type from configuration
+            hedge_exchange = self.config.hedge_exchange
+            self.logger.info('Initializing hedge client for exchange: %s', hedge_exchange)
+            
+            # Create hedge client using get_private_client
+            self._hedge_client = get_private_client(
+                exchange=hedge_exchange,
+                api_key=self.hedge_api_key,
+                api_secret=self.hedge_api_secret,
+                passphrase=self.config.passphrase,  # Read passphrase from config
+                logger=self.logger
+            )
+            
+            if self._hedge_client:
+                self.logger.info('Hedge client initialized successfully')
+            else:
+                self.logger.error('Failed to initialize hedge client')
+        except Exception as e:
+            self.logger.error('Error initializing hedge client: %s', traceback.format_exc())
+
+    def handle_trade_filled(self, data: FilledOrder):
         """ handle trade filled event
         """
         report_time = time.time()
-        trade_id = data['tradeId']
+        trade_id = data.trade_id
 
         if not trade_id:
             self.logger.error("Cannot get trade id from message: %s", data)
@@ -106,17 +228,17 @@ class HedgerAgent():
             return
         self._trade_ids[trade_id] = report_time
 
-        qty = float(data['fillSize'])
-        amount = float(data['fillValue'])
+        qty = float(data.qty)
+        amount = float(data.amount)
         if qty <= 0 or amount <= 0:
             self.logger.error("Invalid trade data: %s", data)
             return
 
-        symbol = data['symbolId']
-        side = data['orderSide']
+        symbol = data.symbol
+        side = data.side
         avg_price = round(amount / qty, 8)
-        order_id = data['orderId']
-        trade_time = float(data['matchTime'])
+        order_id = data.order_id
+        trade_time = float(data.match_time)
 
         self.logger.info("[p:hedger-report]%s:%s", symbol, int(report_time * 1000) - trade_time)
 
@@ -162,9 +284,8 @@ class HedgerAgent():
 
                 symbol = position['symbol']
                 # check hedger config
-                _ = self.config['HEDGER'][symbol]
                 side = position['side']
-                # TODO write redis to inform maker
+                # TODO write redis to inform maker ??
 
                 # hedge filled or partially filled orders
                 hedge_qty = position['qty'] - position['hedged_qty']
@@ -186,9 +307,7 @@ class HedgerAgent():
                     acc_risk_positions[symbol]['qty'] -= hedge_qty
                     acc_risk_positions[symbol]['amt'] -= hedge_amt
             except Exception:
-                if symbol not in self.config['HEDGER']:
-                    send_maker_message(f'{symbol}_HedgeConf', f"Lost {symbol}'s hedger config")
-                    self.logger.error('Cannot Get Hedger Config of %s', symbol)
+                send_maker_message(f'{symbol}_HedgeConf', f"Lost {symbol}'s hedger config")
 
         res = False
         if acc_risk_positions:
@@ -196,7 +315,12 @@ class HedgerAgent():
         for symbol, position in acc_risk_positions.items():
             try:
                 # use try-except for performance tuning
-                hedge_strategy = self.config['HEDGER'][symbol]
+                # Temporarily use config object properties as hedge strategy
+                hedge_strategy = {
+                    'symbol': self.config.hedge_symbol,
+                    'min_amt': self.config.min_amt_per_order,
+                    'min_qty': self.config.min_qty_per_order
+                }
                 hedge_symbol = hedge_strategy['symbol']
                 hedge_amt = position['amt']
                 hedge_qty = position['qty']
@@ -217,26 +341,26 @@ class HedgerAgent():
                 hedge_side = 'SELL' if hedge_qty > 0 else 'BUY'
 
                 cl_order_id = int(1000 * time.time())
-                hedge_price = hedge_amt / hedge_qty
+                hedge_price = abs(hedge_amt) / abs(hedge_qty)
                 self.monitor.info("Pre-Hedge %s: client_orderid=%s, position=%s",
                                   symbol, cl_order_id, position)
-                future = self._hedge_pool.submit(instant_hedge, hedge_strategy, cl_order_id,
+                
+                future = self._hedge_pool.submit(instant_hedge, self._hedge_client, hedge_strategy, cl_order_id,
                                                  abs(hedge_amt), hedge_side, abs(hedge_qty),
                                                  hedge_price, self.logger)
-                hedge_time = int(time.time() * 1000)
-                self.logger.info("[p:hedger-process]%s:%s",
-                                 symbol, hedge_time - self._hedge_prformance.get(symbol, 0))
-
+                # hedge_time = int(time.time() * 1000)
+                # self.logger.info("[p:hedger-process]%s:%s",
+                #                  symbol, hedge_time - self._hedge_prformance.get(symbol, 0))
+                
                 self._hedge_tasks[cl_order_id] = {
                     "symbol": symbol,
                     "future": future,
                 }
                 self.monitor.info('client_orderid=%s, %s %s %s @ %s',
-                                  cl_order_id, hedge_side, abs(hedge_qty), symbol, hedge_price)
+                                  cl_order_id, hedge_side, hedge_qty, symbol, hedge_price)
                 res = True
-            except Exception:
-                if symbol not in self.config['HEDGER']:
-                    self.logger.error(f"Can not get {symbol}'s hedger config")
+            except Exception as e:
+                self.logger.error(f"Error handling risk positions for {symbol}: {e}")
         return res
 
     def _remove_trade_id(self):
@@ -271,26 +395,37 @@ class HedgerAgent():
                         # invalid hedge
                         continue
 
-                    hedge_symbol = self.config['HEDGER'][symbol]['symbol']
+                    # Get hedge symbol from config object
+                    hedge_symbol = self.config.hedge_symbol
                     if hedge_symbol == 'manual':
                         # manually hedge, skip algorithm hedge
                         continue
 
                     # hedged by strategy
                     res = {}
-                    if self._hedger_exchchage == EXCHANGE_BN:
-                        res = self._hedge_client.order_status(order_id=hedge_order_id,
-                                                              symbol=hedge_symbol)
-                    if 'status' not in res:
-                        # hedge order fatal error
-                        send_maker_message('', {
-                            'app_name': self.app_name, 'symbol': hedge_symbol,
-                            'order id': hedge_order_id})
-                        del self._hedge_tasks[cl_order_id]
-                        continue
-
-                    self.monitor.info('Hedged %s: client_orderid=%s, %s %s',
-                                      symbol, cl_order_id, res['side'], res['executedQty'])
+                    
+                    # Use hedge client to query order status
+                    if self._hedge_client:
+                        try:
+                            self.logger.info('Querying order status for order_id: %s, symbol: %s', 
+                                         hedge_order_id, hedge_symbol)
+                            
+                            # Call hedge client's order_status method
+                            res:OrderStatus = self._hedge_client.order_status(
+                                order_id=hedge_order_id,
+                                symbol=hedge_symbol
+                            )
+                            
+                            self.logger.info('Order status response: %s', res)
+                            
+                            # 记录订单状态日志
+                            self.monitor.info('Hedged %s: client_orderid=%s, status: %s, executedQty: %s',
+                                          symbol, cl_order_id, res.get('status', ''), 
+                                          res.get('executedQty', ''))
+                        except Exception as e:
+                            self.logger.error('Error querying order status: %s', traceback.format_exc())
+                    else:
+                        self.logger.warning('Hedge client not initialized, skipping order status query')
 
                     if cl_order_id in self._hedge_tasks:
                         del self._hedge_tasks[cl_order_id]
@@ -314,18 +449,28 @@ class HedgerAgent():
             'log': 0.0,
             'check_tradeid': 0.0,
         }
+        # start listening execution report.
+        self._ws_clients.subscribe_execution_report(self.config.maker_symbol)
         while 1:
             try:
                 ts = time.time()
 
+                # Check for config updates
                 if ts > _last_operating_ts['config'] + 1:
-                    if configer.has_update(self.config.get('version', 0)):
-                        new_conf = configer.get_config()
-                        if new_conf and new_conf['version'] > self.config['version']:
-                            self.config = new_conf
+                    try:
+                        # Load config from Redis
+                        current_version = getattr(self.config, 'version', 0)
+                        r_key = f'{self.config.maker_symbol}_{self.config.hedge_symbol}@{self.config.hedge_exchange}'
+                        version, new_conf = load_config(r_key, current_version)
+                        if version > current_version:
+                            self.logger.info('Config updated, new version: %s', version)
+                            self.config = TokenParameter(new_conf)
                             self.logger.debug('update config: %s', new_conf)
                             self._init_all_ws_clients()
-                    _last_operating_ts['config'] = ts
+                    except Exception as e:
+                        self.logger.error('Error checking config update: %s', traceback.format_exc())
+                    finally:
+                        _last_operating_ts['config'] = ts
 
                 # hedge by order
                 res = self._handle_risk_positions()
@@ -352,44 +497,40 @@ class HedgerAgent():
         self._hedge_pool.shutdown()
         self.wait_for_hedge_multithread(True)
 
-
-def main(param: TokenParameter, ws_client: PrivateWSClient):
+def main(param: TokenParameter):
     """ The main function
     """
-    logger = create_logger(CURR_PATH, f"hedger.log", 'JPM_MM')
-    logger.info('start hedger with config: %s', param)
+    try:
+        logger = create_logger(BASE_PATH, "hedger.log", 'JPM_MM')
+        logger.info('start hedger with config: %s', param)
+        monitor = create_logger(BASE_PATH, "HedgeMonitor.log", 'monitor_hedger', backup_cnt=50)
 
-    monitor = create_logger(CURR_PATH, "HedgeMonitor.log", f'monitor_hedger', backup_cnt=50)
+        # Monitor BiFu trade executions
+        ws_client = BiFuPrivateWSClient(config['private_ws_client'], logger)
 
-    if not HEDGE_API_KEY or not HEDGE_API_SECRET:
-        logger.error("Lost Hedge api key or secret")
-        return
+        if not param.api_key or not param.api_secret:
+            logger.error("Lost Hedge api key or secret")
+            return
 
-    with HedgerAgent(api_key=HEDGE_API_KEY, api_secret=HEDGE_API_SECRET,
-                    logger=logger, monitor=monitor,
-                    config=param, ws_client=ws_client) as agent:
+        agent = HedgerAgent(api_key=param.api_key, api_secret=param.api_secret,
+                        logger=logger, monitor=monitor,
+                        config=param, ws_client=ws_client)
         agent.run_forever()
+    except Exception as e:
+        logger.error("HedgerAgent start error: %s, %s", e, traceback.format_exc())
 
 if __name__ == '__main__':
-    param = TokenParameter({
-            'API KEY': '',
-            'Secret': '',
-            'Passphrase': '',
-            'Stream URL': '',
-            'Maker Symbol': '',
-            'Hedge Symbol': '',
-            'Hedger Price Decimals': '',
-            'Hedger Qty Decimals': '',
-            'Min Qty': '',
-            'Min Amt': '',
-            'Slippage': 0.01,
-        })
+    if len(sys.argv) != 2:
+        print("Usage: python hedger_main.py <config_file>")
+        sys.exit(1)
+    
+    config_file = sys.argv[1]
+    try:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            param = TokenParameter(config['token_parameter'])
+    except Exception as e:
+        print(f"Error: failed to load config file {config_file}: {e}")
+        sys.exit(1)
 
-    ws_client = BiFuPrivateWSClient(
-        api_key=param.api_key,
-        api_secret=param.api_secret,
-        passphrase=param.passphrase,
-        stream_url=param.stream_url,
-    )
-
-    main(param, ws_client)
+    main(param)

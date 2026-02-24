@@ -1,0 +1,21 @@
+{
+    "token_parameter" :{
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": "",
+        "Maker Symbol": "",
+        "Hedge Symbol": "",
+        "Hedger Price Decimals": "",
+        "Hedger Qty Decimals": "",
+        "Min Qty": "",
+        "Min Amt": "",
+        "Slippage": 0.01
+    },
+    "private_ws_client" :{
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": ""
+    }
+}
