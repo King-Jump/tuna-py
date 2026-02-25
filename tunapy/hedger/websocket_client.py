@@ -54,8 +54,7 @@ class UserWebsocketStreamClient:
                 on_close=self._on_close,
                 on_error=self._on_error,
                 on_message=self._on_message,
-                header=self.headers,
-                timeout=10
+                header=self.headers
             )
             
             # Start WebSocket in a separate thread
