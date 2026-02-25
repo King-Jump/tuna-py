@@ -25,6 +25,7 @@ class BiFuPrivateWSClient(PrivateWSClient):
         """ handle the message from the execution report stream
         """
         if message.get('type') == 'spot-trade-event':
+            self.logger.debug("deal message received: %s ", message)
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
                     if filled_order['direction'] == 'MAKER' and filled_order['accountId'] != filled_order['matchAccountId']:
@@ -48,7 +49,6 @@ class BiFuPrivateWSClient(PrivateWSClient):
             pong_message = {'type': 'pong', 'time': str(time.time())}
             self._ws_client.send(pong_message)
             return
-        self.logger.debug("No deal with message: %s ", message)
 
     def subscribe_execution_report(self, symbol: str):
         """ Subscribe to execution report stream

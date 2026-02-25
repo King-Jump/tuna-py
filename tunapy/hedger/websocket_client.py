@@ -110,6 +110,24 @@ class UserWebsocketStreamClient:
             if self.logger:
                 self.logger.error(f"Error handling WebSocket message: {e}")
     
+    def send(self, message):
+        """
+        Send message to WebSocket server
+        
+        Args:
+            message: Message to send
+        """
+        if self.ws:
+            try:
+                if isinstance(message, dict):
+                    message = json.dumps(message)
+                self.ws.send(message)
+                if self.logger:
+                    self.logger.debug(f"Sent message: {message}")
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Failed to send message: {e}")
+
     def close(self):
         """
         Close WebSocket connection
