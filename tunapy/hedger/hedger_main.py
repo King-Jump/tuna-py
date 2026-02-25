@@ -497,21 +497,19 @@ class HedgerAgent():
         self._hedge_pool.shutdown()
         self.wait_for_hedge_multithread(True)
 
-def main(param: TokenParameter):
+def main(conf: dict):
     """ The main function
     """
     try:
+        param = TokenParameter(conf['token_parameter'])
         logger = create_logger(BASE_PATH, "hedger.log", 'JPM_MM')
         logger.info('start hedger with config: %s', param)
         monitor = create_logger(BASE_PATH, "HedgeMonitor.log", 'monitor_hedger', backup_cnt=50)
-
         # Monitor BiFu trade executions
         ws_client = BiFuPrivateWSClient(config['private_ws_client'], logger)
-
         if not param.api_key or not param.api_secret:
             logger.error("Lost Hedge api key or secret")
             return
-
         agent = HedgerAgent(api_key=param.api_key, api_secret=param.api_secret,
                         logger=logger, monitor=monitor,
                         config=param, ws_client=ws_client)
@@ -528,7 +526,7 @@ if __name__ == '__main__':
     try:
         with open(config_file, 'r') as f:
             config = json.load(f)
-            param = TokenParameter(config['token_parameter'])
+            main(config)
     except Exception as e:
         print(f"Error: failed to load config file {config_file}: {e}")
         sys.exit(1)
