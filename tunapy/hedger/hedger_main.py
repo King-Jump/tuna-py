@@ -285,7 +285,6 @@ class HedgerAgent():
                 symbol = position['symbol']
                 # check hedger config
                 side = position['side']
-                # TODO write redis to inform maker ??
 
                 # hedge filled or partially filled orders
                 hedge_qty = position['qty'] - position['hedged_qty']
