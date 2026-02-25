@@ -523,7 +523,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("Usage: python hedger_main.py <config_file>")
         sys.exit(1)
-    
+    import pdb; pdb.set_trace()
     config_file = sys.argv[1]
     try:
         with open(config_file, 'r') as f:
