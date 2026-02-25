@@ -63,7 +63,7 @@ class UserWebsocketStreamClient:
             self.thread.daemon = True
             self.thread.start()
             
-            self.logger.info(f"WebSocket client connected to {self.stream_url}")
+            self.logger.info(f"WebSocket client to {self.stream_url} started")
         except Exception as e:
             self.logger.error(f"Failed to connect to WebSocket: {e}")
     
