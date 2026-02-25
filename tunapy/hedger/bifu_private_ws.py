@@ -9,7 +9,7 @@ from tunapy.hedger.websocket_client import UserWebsocketStreamClient
 
 class BiFuPrivateWSClient(PrivateWSClient):
     def __init__(self, config: dict, logger:Logger) -> None:
-        super().__init__(config)
+        super().__init__(config, logger)
         self.path = '/api/v1/private/ws'
         self._ws_client = None  # create web client in start function
         self._handle_trade_filled = None  # function to process filled trades，setup in start function
