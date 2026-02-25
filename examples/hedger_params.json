@@ -1,21 +1,21 @@
 {
     "token_parameter" :{
-        "API KEY": "",
-        "Secret": "",
-        "Passphrase": "",
-        "Stream URL": "",
-        "Maker Symbol": "",
-        "Hedge Symbol": "",
-        "Hedger Price Decimals": "",
-        "Hedger Qty Decimals": "",
-        "Min Qty": "",
-        "Min Amt": "",
+        "API KEY": "your_api_key",
+        "Secret": "your_api_secret",
+        "Passphrase": "your_passphrase",
+        "Maker Symbol": "your_maker_symbol",
+        "Hedge Symbol": "your_hedge_symbol",
+        "Hedger Exchange": "your_hedge_exchange",
+        "Hedger Price Decimals": "2",
+        "Hedger Qty Decimals": "3",
+        "Min Qty": "0.01",
+        "Min Amt": "1",
         "Slippage": 0.01
     },
     "private_ws_client" :{
-        "API KEY": "",
-        "Secret": "",
-        "Passphrase": "",
-        "Stream URL": ""
+        "API KEY": "your_ws_api_key",
+        "Secret": "your_ws_api_secret",
+        "Passphrase": "your_ws_passphrase",
+        "Stream URL": "your_stream_url"
     }
 }

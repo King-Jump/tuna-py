@@ -2,15 +2,18 @@
 
 ## Project Introduction
 
-tuna-py is a professional cryptocurrency market making trading system, mainly used for providing liquidity on cryptocurrency exchanges and executing self-trading tests. The system consists of three core modules: market data subscription module, self-trading module, and market making module, supporting spot and futures markets of multiple mainstream exchanges.
+tuna-py is a professional cryptocurrency trading system that provides comprehensive solutions for market making, self-trading testing, and risk hedging. The system consists of four core modules: market data subscription module, self-trading module, market making module, and hedging module, supporting spot and futures markets of multiple mainstream exchanges.
 
 ### Main Features
 
 - **Market Data Subscription**: Real-time subscription of market data from exchanges like Binance and OKX, stored in Redis
 - **Self-Trading Test**: Simulate trading behaviors to test market liquidity and trade execution
 - **Intelligent Market Making**: Automatically generate buy and sell orders based on real-time market data to provide market liquidity
+- **Risk Hedging**: Execute hedging operations to manage risk exposure across different exchanges
 - **Multi-Exchange Support**: Support for spot and futures markets on Binance and OKX
 - **Parameterized Configuration**: Flexibly adjust strategy parameters through JSON configuration files
+- **Normalized Exchange Interface**: Use unified API interface for different exchanges through octopus-py
+- **WebSocket Integration**: Real-time execution report streaming for timely hedging decisions
 
 ## Directory Structure
 
@@ -18,35 +21,48 @@ tuna-py is a professional cryptocurrency market making trading system, mainly us
 tuna-py/
 ├── tunapy/
 │   ├── quote/             # Market data subscription module
-│   │   ├── market_main.py     # Main entry of market data module
-│   │   ├── bn_public_ws.py    # Binance spot market data subscription
+│   │   ├── __init__.py          # Package initialization
+│   │   ├── market_main.py        # Main entry of market data module
+│   │   ├── bn_public_ws.py       # Binance spot market data subscription
 │   │   ├── bn_future_public_ws.py # Binance futures market data subscription
-│   │   ├── okx_public_ws.py   # OKX spot market data subscription
-│   │   └── okx_future_public_ws.py # OKX futures market data subscription
+│   │   ├── okx_public_ws.py      # OKX spot market data subscription
+│   │   ├── okx_future_public_ws.py # OKX futures market data subscription
+│   │   └── redis_client.py       # Redis client for market data
 │   ├── self_trader/       # Self-trading module
-│   │   └── self_trader.py     # Main entry of self-trading module
+│   │   └── self_trader.py        # Main entry of self-trading module
 │   ├── maker/             # Market making module
-│   │   ├── market_maker.py    # Main entry of market making module
-│   │   └── maker_libs.py      # Market making utility functions
+│   │   ├── market_maker.py       # Main entry of market making module
+│   │   └── maker_libs.py         # Market making utility functions
 │   ├── management/        # Management module
-│   │   ├── market_making.py   # Market making parameter definition
-│   │   ├── self_trade.py      # Self-trading parameter definition
-│   │   ├── redis_client.py    # Redis client
-│   │   └── hedging.py         # Hedging parameter definition
+│   │   ├── __init__.py          # Package initialization
+│   │   ├── market_making.py      # Market making parameter definition
+│   │   ├── self_trade.py         # Self-trading parameter definition
+│   │   └── hedging.py            # Hedging parameter definition
 │   ├── cexapi/            # Exchange API
-│   │   └── helper.py          # API client helper functions
+│   │   └── helper.py             # API client helper functions
 │   ├── hedger/            # Hedging module
-│   │   └── hedger_main.py     # Main entry of hedging module
+│   │   ├── hedger_main.py        # Main entry of hedging module
+│   │   ├── bifu_private_ws.py    # BiFu private WebSocket client
+│   │   └── websocket_client.py   # WebSocket client implementation
 │   └── utils/             # Utility functions
-│       ├── config_util.py     # Configuration utility
-│       └── db_util.py         # Database utility
+│       ├── __init__.py          # Package initialization
+│       ├── config_util.py        # Configuration utility
+│       └── db_util.py            # Database utility
 ├── docs/                  # Documentation
-│   ├── mm_params.json         # Market making parameter example
-│   ├── st_params_bn.json      # Self-trading parameter example
-│   └── README.md              # Documentation description
+│   ├── hedger_flowchart.md       # Hedging module flowchart
+│   ├── market_maker_flowchart.md # Market making module flowchart
+│   ├── quote_flowchart.md        # Market data module flowchart
+│   └── self_trade_flowchart.md  # Self-trading module flowchart
 ├── examples/              # Examples
+│   ├── hedger_params.json        # Hedging parameter example
+│   ├── mm_params.json            # Market making parameter example
+│   └── st_params_bn.json         # Self-trading parameter example
 ├── tests/                 # Tests
-├── log/                   # Log directory
+│   ├── bn_quote_test.py          # Binance quote test
+│   ├── run_hedger.sh             # Hedger module run script
+│   ├── run_market.sh             # Market data module run script
+│   ├── run_marketmaker.sh        # Market making module run script
+│   └── run_selftrader.sh         # Self-trading module run script
 ├── requirements.txt       # Dependencies
 ├── LICENSE                # License
 └── README.md              # Project description
@@ -71,16 +87,16 @@ python tunapy/quote/market_main.py <exchange> --maker_json=<market maker params>
 
 # Examples:
 # Subscribe to Binance spot market data
-python tunapy/quote/market_main.py binance_spot --maker_json=docs/mm_params.json --st_json=docs/st_params_bn.json
+python tunapy/quote/market_main.py binance_spot --maker_json=examples/mm_params.json --st_json=examples/st_params_bn.json
 
 # Subscribe to Binance futures market data
-python tunapy/quote/market_main.py binance_future --maker_json=docs/mm_params.json --st_json=docs/st_params_bn.json
+python tunapy/quote/market_main.py binance_future --maker_json=examples/mm_params.json --st_json=examples/st_params_bn.json
 
 # Subscribe to OKX spot market data
-python tunapy/quote/market_main.py okx_spot --maker_json=docs/mm_params.json --st_json=docs/st_params_bn.json
+python tunapy/quote/market_main.py okx_spot --maker_json=examples/mm_params.json --st_json=examples/st_params_bn.json
 
 # Subscribe to OKX futures market data
-python tunapy/quote/market_main.py okx_future --maker_json=docs/mm_params.json --st_json=docs/st_params_bn.json
+python tunapy/quote/market_main.py okx_future --maker_json=examples/mm_params.json --st_json=examples/st_params_bn.json
 ```
 
 #### 3.1.2 Market Data Module Parameter Description
@@ -111,7 +127,7 @@ Market data module parameters are specified through command line arguments:
 python tunapy/self_trader/self_trader.py <self trade params>
 
 # Example:
-python tunapy/self_trader/self_trader.py docs/st_params_bn.json
+python tunapy/self_trader/self_trader.py examples/st_params_bn.json
 ```
 
 #### 3.2.2 SelfTrade Module Parameter Description
@@ -173,7 +189,7 @@ Self-trade module parameters are specified through JSON configuration files, exa
 python tunapy/maker/market_maker.py <market maker params>
 
 # Example:
-python tunapy/maker/market_maker.py docs/mm_params.json
+python tunapy/maker/market_maker.py examples/mm_params.json
 ```
 
 #### 3.3.2 MarketMaking Module Parameter Description
@@ -282,6 +298,40 @@ Market making module parameters are specified through JSON configuration files, 
 | Near Diff Per Round | Near-end order price difference threshold | Integer |
 | Force Refresh Num | Force refresh rounds | Integer |
 
+### 3.4 Hedging Module
+
+#### 3.4.1 Startup Command
+
+```bash
+# Command format:
+python tunapy/hedger/hedger_main.py <config_file>
+
+# Example:
+python tunapy/hedger/hedger_main.py examples/hedger_params.json
+```
+
+#### 3.4.2 Hedging Module Overview
+
+The hedging module is designed to manage risk exposure by executing hedge trades on different exchanges. It monitors execution reports through WebSocket and automatically executes hedge orders to offset risk positions.
+
+#### Key Features:
+
+- **Real-time Risk Monitoring**: Monitors trade executions through WebSocket for timely risk assessment
+- **Cross-Exchange Hedging**: Supports hedging across different exchanges using normalized API interface
+- **Batch Order Execution**: Uses batch_make_orders API for efficient order execution
+- **Consistent Client Order IDs**: Generates consistent client_order_id for reliable tracking
+- **Multi-threaded Execution**: Uses thread pool for asynchronous hedge execution
+- **Comprehensive Error Handling**: Robust error handling and logging for reliable operation
+
+#### Configuration Requirements:
+
+The hedging module requires a JSON configuration file with two main sections:
+
+1. **token_parameter**: Contains parameters for the maker account and hedge settings
+2. **private_ws_client**: Contains WebSocket connection parameters for execution report streaming
+
+For detailed configuration parameters, refer to the [hedging module flowchart](./docs/hedger_flowchart.md).
+
 ## Installation and Dependencies
 
 ### Dependencies
@@ -309,7 +359,7 @@ pip install -r requirements.txt
 First start the market data module to subscribe to exchange market data:
 
 ```bash
-python tunapy/quote/market_main.py binance_spot --maker_json docs/mm_params.json --st_json docs/st_params_bn.json
+python tunapy/quote/market_main.py binance_spot --maker_json examples/mm_params.json --st_json examples/st_params_bn.json
 ```
 
 ### 2. Start Self-Trade Module (Optional)
@@ -317,7 +367,7 @@ python tunapy/quote/market_main.py binance_spot --maker_json docs/mm_params.json
 If you need to test liquidity, you can start the self-trade module:
 
 ```bash
-python tunapy/self_trader/self_trader.py docs/st_params_bn.json
+python tunapy/self_trader/self_trader.py examples/st_params_bn.json
 ```
 
 ### 3. Start Market Making Module
@@ -325,7 +375,7 @@ python tunapy/self_trader/self_trader.py docs/st_params_bn.json
 Finally start the market making module to begin providing liquidity:
 
 ```bash
-python tunapy/maker/market_maker.py docs/mm_params.json
+python tunapy/maker/market_maker.py examples/mm_params.json
 ```
 
 ### 4. Start Hedging Module (Optional)
@@ -333,7 +383,41 @@ python tunapy/maker/market_maker.py docs/mm_params.json
 If you need to perform hedging operations, you can start the hedging module:
 
 ```bash
+# Command format:
 python tunapy/hedger/hedger_main.py <config_file>
+
+# Example:
+python tunapy/hedger/hedger_main.py examples/hedger_params.json
+```
+
+#### Hedging Module Parameter Description
+
+Hedging module parameters are specified through JSON configuration files, example configuration:
+
+```json
+{
+    "token_parameter": {
+        "Maker Exchange": "",
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": "",
+        "Maker Symbol": "",
+        "Hedge Symbol": "",
+        "Hedge Exchange": "",
+        "Hedger Price Decimals": "",
+        "Hedger Qty Decimals": "",
+        "Min Qty": "",
+        "Min Amt": "",
+        "Slippage": 0.01
+    },
+    "private_ws_client": {
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": ""
+    }
+}
 ```
 
 ## Logs
@@ -342,6 +426,8 @@ System running logs are stored in the `log/` directory:
 
 - `market_making.log`: Market making module logs
 - `selftrade.log`: Self-trade module logs
+- `hedger.log`: Hedging module logs
+- `HedgeMonitor.log`: Hedging monitor logs
 - `bn_pub_ws.log`: Binance spot market data logs
 - `bn_future_pub_ws.log`: Binance futures market data logs
 - `okx_pub_ws.log`: OKX spot market data logs
@@ -356,13 +442,15 @@ System running logs are stored in the `log/` directory:
 5. **Redis Service**: Ensure Redis service is running properly, as market data and market making modules depend on Redis for data storage
 6. **Exchange Limits**: Understand and comply with each exchange's API call limits and rules
 
-## 5 Module Description
+## 5 Module Implementations
 ### 5.1 Market Data Module
 Find details in [**market data flowchart**](./docs/quote_flowchart.md)
-### 5.2 Self Trade Modele
+### 5.2 Self Trade Module
 Find details in [**self trade flowchart**](./docs/self_trade_flowchart.md)
-### 5.3 Market Maker Modele
+### 5.3 Market Maker Module
 Find details in [**market maker flowchart**](./docs/market_maker_flowchart.md)
+### 5.4 Hedging Module
+Find details in [**hedging module flowchart**](./docs/hedger_flowchart.md)
 
 ## 6 License
 This project is licensed under the MIT License. See the LICENSE file for details.
