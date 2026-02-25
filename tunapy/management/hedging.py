@@ -10,8 +10,6 @@ class TokenParameter:
         self.api_key = conf['API KEY']     # the API key for Maker Account
         self.api_secret = conf['Secret']   # the API secret for Maker Account
         self.passphrase = conf['Passphrase'] # the passphrase for Maker Account
-
-        self.stream_url = conf['Stream URL']     # the stream url for private websocket
         self.maker_symbol = conf['Maker Symbol']     # the maker symbol
         self.hedge_symbol = conf['Hedge Symbol']     # the hedge symbol
         self.hedge_exchange = conf['Hedge Exchange']  # the hedge exchange
