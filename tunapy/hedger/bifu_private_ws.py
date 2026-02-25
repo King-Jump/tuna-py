@@ -68,7 +68,7 @@ class BiFuPrivateWSClient(PrivateWSClient):
         }
         
         """
-        self.logger.info('Successfully subscribed to execution report for symbol: %s', symbol)
+        self.logger.info('subscribed to execution report for symbol: %s, please check the log for filled orders', symbol)
 
     def start(self, symbol, on_open, on_close, on_error, handle_trade_filled):
         self._handle_trade_filled = handle_trade_filled
