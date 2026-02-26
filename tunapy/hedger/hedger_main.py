@@ -453,7 +453,6 @@ class HedgerAgent():
         while 1:
             try:
                 ts = time.time()
-
                 # Check for config updates
                 if ts > _last_operating_ts['config'] + 1:
                     try:
