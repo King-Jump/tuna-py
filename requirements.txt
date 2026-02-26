@@ -6,5 +6,6 @@ pydantic
 binance-futures-connector
 python-okx
 ujson
+websocket-client
 # King-Jump-octopus-py
 ../octopus-py/
