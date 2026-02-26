@@ -505,7 +505,6 @@ def main(conf: dict):
         logger.info('start hedger with config: %s', param)
         monitor = create_logger(BASE_PATH, "HedgeMonitor.log", 'monitor_hedger', backup_cnt=50)
         # Monitor BiFu trade executions
-        import pdb; pdb.set_trace()
         ws_client = BiFuPrivateWSClient(conf['private_ws_client'], logger)
         if not param.api_key or not param.api_secret:
             logger.error("Lost Hedge api key or secret")

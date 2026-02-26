@@ -14,18 +14,11 @@ class BiFuPrivateWSClient(PrivateWSClient):
         self._ws_client = None  # create web client in start function
         self._handle_trade_filled = None  # function to process filled trades，setup in start function
 
-    """
-    WebSocket连接成功之后，Server端会以固定频率向Client端发送Ping消息，消息体如下：
-    {"type":"ping","time":"1693208170000"}，
-    其中time标示的是Server端Ping时刻的时间戳。此时Client端在收到消息后，请回复服务端Pong消息，
-    消息体内容为
-    {"type":"pong","time":"1693208170000"}。超过5次不回应，服务端会主动断开当前连接。
-    """
     def on_message(self, message):
         """ handle the message from the execution report stream
         """
+        self.logger.debug("deal message received: %s ", message)
         if message.get('type') == 'spot-trade-event':
-            self.logger.debug("deal message received: %s ", message)
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
                     if filled_order['direction'] == 'MAKER' and filled_order['accountId'] != filled_order['matchAccountId']:
