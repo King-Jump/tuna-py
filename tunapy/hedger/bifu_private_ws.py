@@ -18,11 +18,10 @@ class BiFuPrivateWSClient(PrivateWSClient):
         """ handle the message from the execution report stream
         """
         if message.get('type') == 'spot-trade-event':
-            self.logger.debug("deal message received: %s ", message)
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
+                    self.logger.info("filled order message: %s", filled_order)
                     if filled_order['direction'] == 'MAKER' and filled_order['accountId'] != filled_order['matchAccountId']:
-                        self.logger.info("on_message, message: %s", message)
                         # filled with user order
                         filled_order = FilledOrder(
                             trade_id=filled_order['tradeId'],
