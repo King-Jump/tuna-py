@@ -221,3 +221,4 @@ local_env.py
 *.bak.py
 *.bak
 test_*
+research/

@@ -23,6 +23,7 @@ class BiFuPrivateWSClient(PrivateWSClient):
                     self.logger.info("filled order message: %s", filled_order)
                     if filled_order['direction'] == 'MAKER' and filled_order['accountId'] != filled_order['matchAccountId']:
                         # filled with user order
+                        self.logger.info("filled by user: %s", filled_order)
                         filled_order = FilledOrder(
                             trade_id=filled_order['tradeId'],
                             qty=filled_order['fillSize'],
