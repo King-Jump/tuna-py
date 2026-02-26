@@ -479,7 +479,7 @@ class HedgerAgent():
                     # log every minute
                     self.logger.info('|STAT| un-finished hedge orders %d, risk position size: %d',
                                       unhedge_cnt, len(self._risk_positions))
-                    self.logger.info('|STAT| config: %s', self.config)
+                    # self.logger.info('|STAT| config: %s', self.config)
                     _last_operating_ts['log'] = ts
 
                 # periodical remove trade id
