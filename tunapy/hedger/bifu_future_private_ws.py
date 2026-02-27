@@ -8,7 +8,7 @@ from tunapy.management.hedging import PrivateWSClient, TokenParameter, FilledOrd
 from tunapy.hedger.websocket_client import UserWebsocketStreamClient
 
 MOCK_TRADE = True   # for test in sandbox
-class BiFuPrivateWSClient(PrivateWSClient):
+class BiFuFuturePrivateWSClient(PrivateWSClient):
     def __init__(self, config: dict, logger:Logger) -> None:
         super().__init__(config, logger)
         self.path = '/api/v1/private/spot/ws'
