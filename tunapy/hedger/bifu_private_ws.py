@@ -26,8 +26,19 @@ class BiFuPrivateWSClient(PrivateWSClient):
                         or
                         (MOCK_TRADE and filled_order['direction'] == 'MAKER')):  # filled with user order or mock trade
                         self.logger.info("filled by user: %s", filled_order)
+                        """
+                        {'id': '722137706313810128', 'accountId': '693457457124475344', 'symbolId': '90000005',
+                        'baseCoinId': '8', 'quoteCoinId': '2', 'orderId': '722137100480151760',
+                        'orderSide': 'BUY', 'fillSize': '0.072', 'fillValue': '45.62424', 'fillFee': '0.00',
+                        'direction': 'MAKER', 'version': '433936403', 'tradeInBalanceTransactionId': '722137706313812176',
+                        'tradeOutBalanceTransactionId': '722137706313811152', 'matchSequenceId': '204414430',
+                        'matchIndex': '0', 'matchTime': '1772171045852', 'matchAccountId': '701908533486027658',
+                        'matchOrderId': '722137706288644234',
+                        'matchFillId': 'cd9803d1-4d2c-4373-99cf-f16c4efa6bbb', 'extraType': '',
+                        'extraDataJson': '', 'createdTime': '1772171045855', 'updatedTime': '1772171045855'}
+                        """
                         filled_order = FilledOrder(
-                            trade_id=filled_order['tradeId'],
+                            trade_id=filled_order['matchFillId'],
                             qty=filled_order['fillSize'],
                             amount=filled_order['fillValue'],
                             symbol=filled_order['symbolId'],
