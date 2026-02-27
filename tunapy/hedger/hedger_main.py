@@ -347,7 +347,7 @@ class HedgerAgent():
                                   symbol, cl_order_id, position)
                 
                 future = self._hedge_pool.submit(instant_hedge, self._hedge_client, hedge_strategy, cl_order_id,
-                                                 abs(hedge_amt), hedge_side, abs(hedge_qty),
+                                                 hedge_side, abs(hedge_qty),
                                                  hedge_price, self.logger)
                 # hedge_time = int(time.time() * 1000)
                 # self.logger.info("[p:hedger-process]%s:%s",
