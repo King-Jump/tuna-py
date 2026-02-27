@@ -218,6 +218,7 @@ class HedgerAgent():
     def handle_trade_filled(self, data: FilledOrder):
         """ handle trade filled event
         """
+        self.logger.debug("handle_trade_filled: %s", data.trade_id)
         report_time = time.time()
         trade_id = data.trade_id
 
