@@ -4,7 +4,7 @@ import time
 import traceback
 from logging import Logger
 
-from tunapy.management.hedging import PrivateWSClient, TokenParameter, FilledOrder
+from tunapy.management.hedging import PrivateWSClient, FilledOrder
 from tunapy.hedger.websocket_client import UserWebsocketStreamClient
 
 MOCK_TRADE = True   # for test in sandbox
