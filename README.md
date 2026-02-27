@@ -42,7 +42,8 @@ tuna-py/
 │   │   └── helper.py             # API client helper functions
 │   ├── hedger/            # Hedging module
 │   │   ├── hedger_main.py        # Main entry of hedging module
-│   │   ├── bifu_private_ws.py    # BiFu private WebSocket client
+│   │   ├── bifu_private_ws.py    # BiFu spot private WebSocket client
+│   │   ├── bifu_future_private_ws.py # BiFu futures private WebSocket client
 │   │   └── websocket_client.py   # WebSocket client implementation
 │   └── utils/             # Utility functions
 │       ├── __init__.py          # Package initialization
@@ -328,6 +329,7 @@ The hedging module is designed to manage risk exposure by executing hedge trades
 The hedging module requires a JSON configuration file with two main sections:
 
 1. **token_parameter**: Contains parameters for the maker account and hedge settings
+   - **Market Type**: Specifies whether to use spot or futures market (spot/futures)
 2. **private_ws_client**: Contains WebSocket connection parameters for execution report streaming
 
 For detailed configuration parameters, refer to the [hedging module flowchart](./docs/hedger_flowchart.md).
@@ -405,6 +407,7 @@ Hedging module parameters are specified through JSON configuration files, exampl
         "Maker Symbol": "",
         "Hedge Symbol": "",
         "Hedge Exchange": "",
+        "Market Type": "spot",
         "Hedger Price Decimals": "",
         "Hedger Qty Decimals": "",
         "Min Qty": "",
