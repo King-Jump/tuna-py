@@ -6,6 +6,7 @@
         "Maker Symbol": "your_maker_symbol",
         "Hedge Symbol": "your_hedge_symbol",
         "Hedger Exchange": "your_hedge_exchange",
+        "Market Type": "spot",
         "Hedger Price Decimals": "2",
         "Hedger Qty Decimals": "3",
         "Min Qty": "0.01",

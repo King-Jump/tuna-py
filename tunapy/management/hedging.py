@@ -13,6 +13,7 @@ class TokenParameter:
         self.maker_symbol = conf['Maker Symbol']     # the maker symbol
         self.hedge_symbol = conf['Hedge Symbol']     # the hedge symbol
         self.hedge_exchange = conf['Hedger Exchange']  # the hedge exchange
+        self.market_type = conf.get('Market Type', 'spot')  # the market type: spot or futures
         self.price_decimals = int(conf['Hedger Price Decimals'])      # price decimals of hedger symbol
         self.qty_decimals = int(conf['Hedger Qty Decimals'])          # quantity decimals of hedger symbol
 

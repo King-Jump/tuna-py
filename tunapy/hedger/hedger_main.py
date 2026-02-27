@@ -19,6 +19,7 @@ from octopuspy.utils.log_util import create_logger
 from octopuspy.exchange.base_restapi import NewOrder, OrderStatus
 from tunapy.management.hedging import PrivateWSClient, TokenParameter, FilledOrder
 from tunapy.hedger.bifu_private_ws import BiFuPrivateWSClient
+from tunapy.hedger.bifu_future_private_ws import BiFuFuturePrivateWSClient
 from tunapy.cexapi.helper import get_private_client
 
 # Exchange constants
@@ -504,7 +505,12 @@ def main(conf: dict):
         logger.info('start hedger with config: %s', param)
         monitor = create_logger(BASE_PATH, "HedgeMonitor.log", 'monitor_hedger', backup_cnt=50)
         # Monitor BiFu trade executions
-        ws_client = BiFuPrivateWSClient(conf['private_ws_client'], logger)
+        if param.market_type == 'futures':
+            logger.info('Using futures private WS client')
+            ws_client = BiFuFuturePrivateWSClient(conf['private_ws_client'], logger)
+        else:
+            logger.info('Using spot private WS client')
+            ws_client = BiFuPrivateWSClient(conf['private_ws_client'], logger)
         if not param.api_key or not param.api_secret:
             logger.error("Lost Hedge api key or secret")
             return
