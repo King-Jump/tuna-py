@@ -189,7 +189,7 @@ class HedgerAgent():
     def on_error(self, error):
         """ error handler
         """
-        self.logger.error('WS on_error, error: %s', error)
+        self.logger.error('WS on_error, error: %s, %s', error, traceback.format_exc())
 
     def _init_hedge_client(self):
         """ Initialize hedge client
