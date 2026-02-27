@@ -77,7 +77,7 @@ class BiFuFuturePrivateWSClient(PrivateWSClient):
         """
         self.logger.info('subscribed to execution report for symbol: %s, please check the log for filled orders', symbol)
 
-    def start(self, symbol, on_open, on_close, on_error, handle_trade_filled):
+    def start(self, symbol, on_open, on_close, handle_trade_filled, on_error):
         self._handle_trade_filled = handle_trade_filled
         self._ws_client = self._ws_connect(on_open, on_close, on_error)
 
