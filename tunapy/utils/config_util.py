@@ -5,7 +5,7 @@ import redis
 from redis import ConnectionError
 
 REDIS_CONFIG = {
-    "host": "127.0.0.1", "port": 6379, "password": "1234657",
+    "host": "127.0.0.1", "port": 6379, "password": "",
     "max_connections": 5,
     "socket_connect_timeout": 1,
     "health_check_interval": 30,
