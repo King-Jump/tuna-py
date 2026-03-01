@@ -6,8 +6,8 @@
         "Secret": "Your API SECRET",
         "Passphrase": "Your Passphrase",
 
-        "Follow Exchange": "binance_spot",
-        "Follow Symbol": "bnbusdt",
+        "Follow Exchange": "okx_spot",
+        "Follow Symbol": "BNB-USDT",
         "Term type": "SPOT",
         "Maker Price Decimals": 2,
         "Maker Qty Decimals": 3,
@@ -27,8 +27,8 @@
         "Secret": "Your API SECRET",
         "Passphrase": "Your Passphrase",
 
-        "Follow Exchange": "binance_UMFuture",
-        "Follow Symbol": "bnbusdt",
+        "Follow Exchange": "okx_future",
+        "Follow Symbol": "BNB-USDT",
         "Term type": "FUTURE",
         "Maker Price Decimals": 2,
         "Maker Qty Decimals": 3,
