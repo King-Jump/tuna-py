@@ -11,14 +11,14 @@ MOCK_TRADE = True   # for test in sandbox
 class BiFuFuturePrivateWSClient(PrivateWSClient):
     def __init__(self, config: dict, logger:Logger) -> None:
         super().__init__(config, logger)
-        self.path = '/api/v1/private/spot/ws'
+        self.path = '/api/v1/private/contract/ws'
         self._ws_client = None  # create web client in start function
         self._handle_trade_filled = None  # function to process filled trades，setup in start function
 
     def on_message(self, message):
         """ handle the message from the execution report stream
         """
-        if message.get('type') == 'spot-trade-event':
+        if message.get('type') == 'contract-trade-event':
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
                     self.logger.info("filled order message: %s", filled_order)
