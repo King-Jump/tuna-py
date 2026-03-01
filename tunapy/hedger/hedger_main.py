@@ -500,6 +500,7 @@ class HedgerAgent():
 def main(conf: dict):
     """ The main function
     """
+    import pdb; pdb.set_trace()
     try:
         param = TokenParameter(conf['token_parameter'])
         logger = create_logger(BASE_PATH, "hedger.log", 'JPM_MM')
