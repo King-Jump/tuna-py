@@ -48,7 +48,7 @@ vi examples/mm_params.json
         "Passphrase": "xxx",
 ```
 
-# Run the market_mdking module
+# Run the market_making module
 ```
 python3 tunapy/maker/market_maker.py examples/mm_params.json
 ```
