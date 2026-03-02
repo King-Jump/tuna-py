@@ -4,13 +4,13 @@
         "API KEY": "your api key",
         "Secret": "your api secret",
         "Passphrase": "your passphrase",
-        
+
         "Follow Exchange": "binance_spot",
         "Follow Symbol": "BTCUSDT",
-        
+
         "Maker Symbol": "90000001",
-        "Maker Price Decimals": 5,
-        "Maker Qty Decimals": 2,
+        "Maker Price Decimals": 2,
+        "Maker Qty Decimals": 5,
         "Term type": "SPOT",
 
         "Far Interval": 5,
@@ -49,13 +49,13 @@
         "API KEY": "your api key",
         "Secret": "your api secret",
         "Passphrase": "your passphrase",
-        
+
         "Follow Exchange": "binance_spot",
-        "Follow Symbol": "DOTUSDT",
-        
-        "Maker Symbol": "90000009",
+        "Follow Symbol": "ETHUSDT",
+
+        "Maker Symbol": "90000002",
         "Maker Price Decimals": 2,
-        "Maker Qty Decimals": 2,
+        "Maker Qty Decimals": 4,
         "Term type": "SPOT",
 
         "Far Interval": 5,
@@ -88,5 +88,5 @@
         "Near Min Amt": 100,
         "Near Diff Per Round": 5,
         "Force Refresh Num": 10
-    }    
+    }
 ]
