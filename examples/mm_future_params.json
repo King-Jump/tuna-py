@@ -1,0 +1,47 @@
+[
+    {
+        "Maker Exchange": "bifu_future",
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        
+        "Follow Exchange": "binance_future",
+        "Follow Symbol": "1000PEPEUSDT",
+        
+        "Maker Symbol": "10000012",
+        "Maker Price Decimals": 8,
+        "Maker Qty Decimals": 0,
+        "Term type": "FUTURE",
+
+        "Far Interval": 5,
+        "Far Quote Timeout": 5,
+        "Far Side": "BOTH",
+        "Far TIF": "GTX",
+        "Far Strategy": "SPREAD",
+        "Far Buy Price Margin": 0.0005,
+        "Far Sell Price Margin": 0.0005,
+        "Far Qty Multiplier": 0.95,
+        "Far Ask Size": 5,
+        "Far Bid Size": 5,
+        "Far Max Amt Per Order": 100000,
+        "Far Min Qty": 1e-06,
+        "Far Min Amt": 100,
+        "Far Diff Per Round": 5,
+
+        "Near Interval": 0.5,
+        "Near Quote Timeout": 5,
+        "Near Side": "BOTH",
+        "Near TIF": "GTC",
+        "Near Strategy": "MIRROR",
+        "Near Buy Price Margin": 5,
+        "Near Sell Price Margin": 5,
+        "Near Qty Multiplier": 0.95,
+        "Near Ask Size": 5,
+        "Near Bid Size": 5,
+        "Near Max Amt Per Order": 100000,
+        "Near Min Qty": 1e-06,
+        "Near Min Amt": 100,
+        "Near Diff Per Round": 5,
+        "Force Refresh Num": 10
+    }
+]

@@ -243,51 +243,79 @@ async def market_making(
         valid_asks = []
         for price, qty in new_asks:
             if price > top_bid:  # avoid self-trade
-                # Determine order side based on term_type
                 if param.term_type == 'FUTURE':
-                    order_side = 'LONG'  # SELL in spot becomes LONG in future
-                else:
-                    order_side = 'SELL'
-                valid_asks.append(
-                    # batch order data structure
-                    NewOrder(
-                        symbol=maker_symbol,
-                        client_id=gen_client_order_id(
-                            maker_symbol, clorder_start, clorder_offset),
-                        side=order_side,
-                        type='LIMIT',
-                        quantity=qty,
-                        price=price,
-                        biz_type=param.term_type,
-                        tif=param.near_tif,
-                        position_side=param.position_side,
+                    # 合约订单：现货SELL对应合约LONG
+                    valid_asks.append(
+                        # batch order data structure
+                        NewOrder(
+                            symbol=maker_symbol,
+                            client_id=gen_client_order_id(
+                                maker_symbol, clorder_start, clorder_offset),
+                            side="",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=param.near_tif,
+                            position_side="LONG",
+                        )
                     )
-                )
+                else:
+                    # 现货订单
+                    valid_asks.append(
+                        # batch order data structure
+                        NewOrder(
+                            symbol=maker_symbol,
+                            client_id=gen_client_order_id(
+                                maker_symbol, clorder_start, clorder_offset),
+                            side="SELL",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=param.near_tif,
+                            position_side=param.position_side,
+                        )
+                    )
                 clorder_offset += 1
         valid_bids = []
         top_ask = min(new_asks[0][0] if new_asks else float(ask_bid['asks'][0][0]), ctx.get('top_ask', top_bid))
         for price, qty in new_bids:
             if price < top_ask:
-                # Determine order side based on term_type
                 if param.term_type == 'FUTURE':
-                    order_side = 'SHORT'  # BUY in spot becomes SHORT in future
-                else:
-                    order_side = 'BUY'
-                valid_bids.append(
-                    # batch order data structure
-                    NewOrder(
-                        symbol=maker_symbol,
-                        client_id=gen_client_order_id(
-                            maker_symbol, clorder_start, clorder_offset),
-                        side=order_side,
-                        type='LIMIT',
-                        quantity=qty,
-                        price=price,
-                        biz_type=param.term_type,
-                        tif=param.near_tif,
-                        position_side=param.position_side,
+                    # 合约订单：现货BUY对应合约SHORT
+                    valid_bids.append(
+                        # batch order data structure
+                        NewOrder(
+                            symbol=maker_symbol,
+                            client_id=gen_client_order_id(
+                                maker_symbol, clorder_start, clorder_offset),
+                            side="",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=param.near_tif,
+                            position_side="SHORT",
+                        )
                     )
-                )
+                else:
+                    # 现货订单
+                    valid_bids.append(
+                        # batch order data structure
+                        NewOrder(
+                            symbol=maker_symbol,
+                            client_id=gen_client_order_id(
+                                maker_symbol, clorder_start, clorder_offset),
+                            side="BUY",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=param.near_tif,
+                            position_side=param.position_side,
+                        )
+                    )
                 clorder_offset += 1
         # put orders via exchange restful API
         await handle_orders(param, maker_symbol, valid_asks, valid_bids, ctx, logger, False)

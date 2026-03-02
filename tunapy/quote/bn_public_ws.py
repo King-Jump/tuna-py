@@ -17,9 +17,9 @@ from octopuspy.utils.log_util import create_logger
 # one munite = 600 * 100 ms
 ONE_MIN_HUNDRED_MS = 600
 # binance spot partial depth
-EXCHANGE_DEPTH_PREFIX = 'binance_spot_depth'
+# EXCHANGE_DEPTH_PREFIX = 'binance_spot_depth'
 # binance spot ticker
-EXCHANGE_TICKER_PREFIX = 'binance_spot_ticker'
+# EXCHANGE_TICKER_PREFIX = 'binance_spot_ticker'
 
 CURR_PATH = os.path.dirname(os.path.abspath(__file__))
 LOGGER = create_logger(BASE_DIR, "bn_pub_ws.log", "BN-PUBWS", 10)
@@ -34,7 +34,7 @@ def _key(tag, ts):
         The update period of Binance WS is 100ms.
         1 minutes have 60 * 10 = 600 (100ms)
     """
-    return f'{EXCHANGE_DEPTH_PREFIX}{tag}{ts % ONE_MIN_HUNDRED_MS}'
+    return f'{'binance_spot_depth'}{tag}{ts % ONE_MIN_HUNDRED_MS}'
 
 def _handle_orderbook_depth(rkey: str, req_ts: int, data: dict) -> dict:
     order_book = {
@@ -52,7 +52,7 @@ def _handle_ticker(data: dict, req_ts: int) -> dict:
     symbol = data['data']['s'].lower()  # bn symbol default lowercase
     price = float(data['data']['p'])
     qty = float(data['data']['q'])
-    rkey = f'{EXCHANGE_TICKER_PREFIX}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
+    rkey = f'{'binance_spot_ticker'}{symbol}{req_ts % ONE_MIN_HUNDRED_MS}'
     DATA_REDIS_CLIENT.set_dict(f'{rkey}_value', {'price': price, 'qty': qty})
     DATA_REDIS_CLIENT.set_int(rkey, req_ts)
     LOGGER.info('Update Tick %s, price=%s, qty=%s', rkey, price, qty)

@@ -96,48 +96,72 @@ def gen_far_liquidity(symbol: str,
         for price, qty in new_orders:
             # avoid self-trade
             if price < guard_price:
-                # Determine order side based on term_type
                 if param.term_type == 'FUTURE':
-                    order_side = 'SHORT'  # BUY in spot becomes SHORT in future
-                else:
-                    order_side = 'BUY'
-                orders.append(
-                    NewOrder(
-                        symbol=symbol,
-                        client_id=gen_client_order_id(f'B{symbol}', cl_order_start, offset, True),
-                        side=order_side,
-                        type='LIMIT',
-                        quantity=qty,
-                        price=price,
-                        biz_type=param.term_type,
-                        tif=tif,
-                        position_side=param.position_side,
+                    # 合约订单：现货BUY对应合约SHORT
+                    orders.append(
+                        NewOrder(
+                            symbol=symbol,
+                            client_id=gen_client_order_id(f'B{symbol}', cl_order_start, offset, True),
+                            side="",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=tif,
+                            position_side="SHORT",
+                        )
                     )
-                )
+                else:
+                    # 现货订单
+                    orders.append(
+                        NewOrder(
+                            symbol=symbol,
+                            client_id=gen_client_order_id(f'B{symbol}', cl_order_start, offset, True),
+                            side="BUY",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=tif,
+                            position_side=param.position_side,
+                        )
+                    )
                 offset += 1
     else:
         new_orders = _gen_ask_orders_far(askbids['asks'], param)
         for price, qty in new_orders:
             # avoid self-trade
             if price > guard_price:
-                # Determine order side based on term_type
                 if param.term_type == 'FUTURE':
-                    order_side = 'LONG'  # SELL in spot becomes LONG in future
-                else:
-                    order_side = 'SELL'
-                orders.append(
-                    NewOrder(
-                        symbol=symbol,
-                        client_id=gen_client_order_id(f'S{symbol}', cl_order_start, offset, True),
-                        side=order_side,
-                        type='LIMIT',
-                        quantity=qty,
-                        price=price,
-                        biz_type=param.term_type,
-                        tif=tif,
-                        position_side=param.position_side,
+                    # 合约订单：现货SELL对应合约LONG
+                    orders.append(
+                        NewOrder(
+                            symbol=symbol,
+                            client_id=gen_client_order_id(f'S{symbol}', cl_order_start, offset, True),
+                            side="",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=tif,
+                            position_side="LONG",
+                        )
                     )
-                )
+                else:
+                    # 现货订单
+                    orders.append(
+                        NewOrder(
+                            symbol=symbol,
+                            client_id=gen_client_order_id(f'S{symbol}', cl_order_start, offset, True),
+                            side="SELL",
+                            type='LIMIT',
+                            quantity=qty,
+                            price=price,
+                            biz_type=param.term_type,
+                            tif=tif,
+                            position_side=param.position_side,
+                        )
+                    )
                 offset += 1
     return orders
 
