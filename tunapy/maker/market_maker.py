@@ -47,7 +47,6 @@ async def _clear_all_open_orders(symbol: str, ctx: dict, logger: Logger):
     if not res:
         logger.error('Can not cancel all open orders of %s', symbol)
 
-
 async def _clear_all_ner_open_orders(symbol: str, ctx: dict, logger: Logger):
     logger.info("Cancel all ner open orders of %s", symbol)
     orders = await _open_orders(ctx, symbol)
@@ -58,7 +57,6 @@ async def _clear_all_ner_open_orders(symbol: str, ctx: dict, logger: Logger):
         if ctx['client']:
             res = ctx['client'].batch_cancel(cancell_ids, symbol)
         logger.info('Cancel all near orders %s', res)
-
 
 async def _make_orders(ctx: dict, symbol: str, orders: list, logger: Logger) -> list:
     res = []
@@ -245,13 +243,18 @@ async def market_making(
         valid_asks = []
         for price, qty in new_asks:
             if price > top_bid:  # avoid self-trade
+                # Determine order side based on term_type
+                if param.term_type == 'FUTURE':
+                    order_side = 'LONG'  # SELL in spot becomes LONG in future
+                else:
+                    order_side = 'SELL'
                 valid_asks.append(
                     # batch order data structure
                     NewOrder(
                         symbol=maker_symbol,
                         client_id=gen_client_order_id(
                             maker_symbol, clorder_start, clorder_offset),
-                        side="SELL",
+                        side=order_side,
                         type='LIMIT',
                         quantity=qty,
                         price=price,
@@ -265,13 +268,18 @@ async def market_making(
         top_ask = min(new_asks[0][0] if new_asks else float(ask_bid['asks'][0][0]), ctx.get('top_ask', top_bid))
         for price, qty in new_bids:
             if price < top_ask:
+                # Determine order side based on term_type
+                if param.term_type == 'FUTURE':
+                    order_side = 'SHORT'  # BUY in spot becomes SHORT in future
+                else:
+                    order_side = 'BUY'
                 valid_bids.append(
                     # batch order data structure
                     NewOrder(
                         symbol=maker_symbol,
                         client_id=gen_client_order_id(
                             maker_symbol, clorder_start, clorder_offset),
-                        side="BUY",
+                        side=order_side,
                         type='LIMIT',
                         quantity=qty,
                         price=price,

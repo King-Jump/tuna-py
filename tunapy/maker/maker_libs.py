@@ -96,11 +96,16 @@ def gen_far_liquidity(symbol: str,
         for price, qty in new_orders:
             # avoid self-trade
             if price < guard_price:
+                # Determine order side based on term_type
+                if param.term_type == 'FUTURE':
+                    order_side = 'SHORT'  # BUY in spot becomes SHORT in future
+                else:
+                    order_side = 'BUY'
                 orders.append(
                     NewOrder(
                         symbol=symbol,
                         client_id=gen_client_order_id(f'B{symbol}', cl_order_start, offset, True),
-                        side="BUY",
+                        side=order_side,
                         type='LIMIT',
                         quantity=qty,
                         price=price,
@@ -115,11 +120,16 @@ def gen_far_liquidity(symbol: str,
         for price, qty in new_orders:
             # avoid self-trade
             if price > guard_price:
+                # Determine order side based on term_type
+                if param.term_type == 'FUTURE':
+                    order_side = 'LONG'  # SELL in spot becomes LONG in future
+                else:
+                    order_side = 'SELL'
                 orders.append(
                     NewOrder(
                         symbol=symbol,
                         client_id=gen_client_order_id(f'S{symbol}', cl_order_start, offset, True),
-                        side="SELL",
+                        side=order_side,
                         type='LIMIT',
                         quantity=qty,
                         price=price,
