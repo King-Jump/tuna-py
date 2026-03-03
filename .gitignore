@@ -222,3 +222,7 @@ local_env.py
 *.bak
 test_*
 research/
+
+# Chinese documentation files
+*chinese*.md
+README(chinese).md
