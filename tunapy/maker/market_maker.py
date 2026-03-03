@@ -290,7 +290,7 @@ async def market_making(
                             symbol=maker_symbol,
                             client_id=gen_client_order_id(
                                 maker_symbol, clorder_start, clorder_offset),
-                            side="BUY",
+                            side="SELL",
                             type='LIMIT',
                             quantity=qty,
                             price=price,
