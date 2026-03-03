@@ -1,14 +1,15 @@
 # 永续合约自动对冲策略
 ## 一、在同一个交易所进行合约对冲
 ### 方法：
-每做市一个合约，同时铺一个反向等值对冲合约。对冲合约的价格将两次交易的手续费考虑在内。撤销做市合约时，同时撤销对冲合约。做市合约如果成交，市价close对冲合约。  
+每做市一个合约，同时铺一个反向等值对冲合约。对冲合约的价格将两次交易的手续费考虑在内。撤销做市合约时，同时撤销对冲合约。做市合约如果成交，市价close对冲合约（或者撤销??）。对冲合约如果成交，市价close做市合约（或者撤销??）。  
 ### 要求：
 使用双向持仓模式，手续费加倍。
 ### 价格定义：
-**maker_price:** 做市价格，由做市程序计算。  
+**maker_price:** 做市价格，由做市程序计算。同时是合约的止盈价格。  
+**ticker_price:** 合约市价，同时是合约的买入价格。  
 **delta_price:** 做市差价，delta_price = maker_price - ticker_price   
 **hedge_price:** 对冲价格，hedge_price = ticker_price - delta_price  
-**positioon_side:** "LONG" if price>ticker_price else "SHORT"  
+**positioon_side:** "LONG" if maker_price > ticker_price else "SHORT"  
 **trade_fee:** 单次手续费，trade_fee = amount * fee_rate  
 ### 考虑手续费：
 **if hedge_position_side = "LONG":** hedge_price += trade_fee * 2  
@@ -30,18 +31,22 @@ flowchart TD
     E --> F{确定对冲方向}
     F -->|BUY对应| G[创建SHORT对冲合约]
     F -->|SELL对应| H[创建LONG对冲合约]
-    G --> I[监控做市合约状态]
+    G --> I[同时监控两个合约状态]
     H --> I
-    I --> J{做市合约状态}
-    J -->|成交| K[市价close对冲合约]
-    J -->|撤销| L[撤销对冲合约]
-    J -->|未成交| M[继续监控]
-    K --> N[更新持仓状态]
-    L --> N
-    M --> I
-    N --> O{是否继续做市}
-    O -->|是| A
-    O -->|否| P[结束]
+    I --> J{合约状态}
+    J -->|做市合约成交| K[市价close对冲合约]
+    J -->|对冲合约成交| L[市价close做市合约]
+    J -->|做市合约撤销| M[撤销对冲合约]
+    J -->|对冲合约撤销| N[撤销做市合约]
+    J -->|均未成交| O[继续监控]
+    K --> P[更新持仓状态]
+    L --> P
+    M --> P
+    N --> P
+    O --> I
+    P --> Q{是否继续做市}
+    Q -->|是| A
+    Q -->|否| R[结束]
 ```
 ## 二、在不同交易所进行合约对冲
 ### 方法：
