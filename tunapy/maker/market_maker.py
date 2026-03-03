@@ -251,7 +251,7 @@ async def market_making(
                             symbol=maker_symbol,
                             client_id=gen_client_order_id(
                                 maker_symbol, clorder_start, clorder_offset),
-                            side="",
+                            side="BUY",
                             type='LIMIT',
                             quantity=qty,
                             price=price,
@@ -274,7 +274,7 @@ async def market_making(
                             price=price,
                             biz_type=param.term_type,
                             tif=param.near_tif,
-                            position_side=param.position_side,
+                            position_side="",
                         )
                     )
                 clorder_offset += 1
@@ -290,7 +290,7 @@ async def market_making(
                             symbol=maker_symbol,
                             client_id=gen_client_order_id(
                                 maker_symbol, clorder_start, clorder_offset),
-                            side="",
+                            side="BUY",
                             type='LIMIT',
                             quantity=qty,
                             price=price,
@@ -313,7 +313,7 @@ async def market_making(
                             price=price,
                             biz_type=param.term_type,
                             tif=param.near_tif,
-                            position_side=param.position_side,
+                            position_side="",
                         )
                     )
                 clorder_offset += 1
@@ -379,7 +379,7 @@ async def main(params: list[TokenParameter]):
                                                 logger=logger,
                                                 )
                     # use mock interface for fast testing
-                    # client.mock = True
+                    client.mock = True
                     _prev_context[symbol] = {
                         'client': client,
                         'follow_exchange': param.follow_exchange,   # used to create get_ticker key
