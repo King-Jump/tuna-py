@@ -21,7 +21,6 @@ class BiFuPrivateWSClient(PrivateWSClient):
         if message.get('type') == 'spot-trade-event':
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
-                    self.logger.info("filled order message: %s", filled_order)
                     if ((not MOCK_TRADE and filled_order['direction'] == 'MAKER' and filled_order['accountId'] != filled_order['matchAccountId'])
                         or
                         (MOCK_TRADE and filled_order['direction'] == 'MAKER')):  # filled with user order or mock trade

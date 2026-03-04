@@ -79,7 +79,6 @@ def instant_hedge(
         )
         
         # Set position side for future hedge
-        logger.debug("check position_side: %s, %s", hedge_strategy['biz_type'], hedge_side)
         if hedge_strategy['biz_type'].upper() == 'FUTURE':
             new_order.position_side = 'SHORT' if hedge_side == 'SELL' else 'LONG'
         logger.info('Creating hedge order: %s', new_order)
@@ -91,7 +90,7 @@ def instant_hedge(
                 symbol=hedge_symbol
             )
             
-            logger.info('Hedge order created successfully: %s', order_ids)
+            logger.info('Hedge order placed: %s', order_ids)
             
             # 从响应中获取订单ID
             if order_ids and len(order_ids) > 0:
@@ -503,10 +502,9 @@ class HedgerAgent():
 def main(conf: dict):
     """ The main function
     """
-    import pdb; pdb.set_trace()
     try:
         param = TokenParameter(conf['token_parameter'])
-        logger = create_logger(BASE_PATH, "hedger.log", 'JPM_MM')
+        logger = create_logger(BASE_PATH, f"{param.maker_symbol}-hedger.log", 'JPM_HEDGER')
         logger.info('start hedger with config: %s', param)
         monitor = create_logger(BASE_PATH, "HedgeMonitor.log", 'monitor_hedger', backup_cnt=50)
         # Monitor BiFu trade executions
