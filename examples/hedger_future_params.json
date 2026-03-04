@@ -1,22 +1,22 @@
 {
     "token_parameter" :{
-        "API KEY": "Your Follow Exchange API KEY",
-        "Secret": "Your Follow Exchange API Secret",
-        "Passphrase": "Your Follow Exchange Passphrase",
-        "Maker Symbol": "90000005",
-        "Hedge Symbol": "bnbusdt",
-        "Hedger Exchange": "binance_futures",
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Maker Symbol": "10000006",
+        "Hedge Symbol": "DOGEUSDT",
+        "Hedger Exchange": "binance_future",
         "Market Type": "futures",
-        "Hedger Price Decimals": "2",
-        "Hedger Qty Decimals": "3",
+        "Hedger Price Decimals": "5",
+        "Hedger Qty Decimals": "0",
         "Min Qty": "0.01",
         "Min Amt": "1",
         "Slippage": 0.01
     },
     "private_ws_client" :{
-        "API KEY": "Your bifu future API KEY",
-        "Secret": "Your bifu future API Secret",
-        "Passphrase": "Your bifu future Passphrase",
-        "Stream URL": "bifu_futures stream URL"
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": "ws://contract.bifu.internal"
     }
 }
