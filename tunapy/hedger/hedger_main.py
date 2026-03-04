@@ -80,7 +80,7 @@ def instant_hedge(
         
         # Set position side for future hedge
         logger.debug("check position_side: %s, %s", hedge_strategy['biz_type'], hedge_side)
-        if hedge_strategy['market_type'].upper() == 'FUTURE':
+        if hedge_strategy['biz_type'].upper() == 'FUTURE':
             new_order.position_side = 'SHORT' if hedge_side == 'SELL' else 'LONG'
         logger.info('Creating hedge order: %s', new_order)
         
