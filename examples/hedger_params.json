@@ -1,11 +1,11 @@
 {
     "token_parameter" :{
-        "API KEY": "your_api_key",
-        "Secret": "your_api_secret",
-        "Passphrase": "your_passphrase",
-        "Maker Symbol": "your_maker_symbol",
-        "Hedge Symbol": "your_hedge_symbol",
-        "Hedger Exchange": "your_hedge_exchange",
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Maker Symbol": "90000005",
+        "Hedge Symbol": "bnbusdt",
+        "Hedger Exchange": "binance_spot",
         "Market Type": "spot",
         "Hedger Price Decimals": "2",
         "Hedger Qty Decimals": "3",
@@ -14,9 +14,9 @@
         "Slippage": 0.01
     },
     "private_ws_client" :{
-        "API KEY": "your_ws_api_key",
-        "Secret": "your_ws_api_secret",
-        "Passphrase": "your_ws_passphrase",
-        "Stream URL": "your_stream_url"
+        "API KEY": "",
+        "Secret": "",
+        "Passphrase": "",
+        "Stream URL": "ws://spot.bifu.internal"
     }
 }
