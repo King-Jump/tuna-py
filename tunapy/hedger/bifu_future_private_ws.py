@@ -18,7 +18,7 @@ class BiFuFuturePrivateWSClient(PrivateWSClient):
     def on_message(self, message):
         """ handle the message from the execution report stream
         """
-        self.logger.debug("message received: %s", message)
+        self.logger.debug("message received: %s", message)  #for debug
         if message.get('type') == 'contract-trade-event':
             try:
                 for filled_order in message['msg']['data']['orderFillTransaction']:
