@@ -323,7 +323,7 @@ class HedgerAgent():
                     'symbol': self.config.hedge_symbol,
                     'min_amt': self.config.min_amt_per_order,
                     'min_qty': self.config.min_qty_per_order,
-                    'biz_type': self.config.biz_type,
+                    'biz_type': self.config.market_type,
                 }
                 # hedge_symbol = hedge_strategy['symbol']
                 hedge_amt = position['amt']
