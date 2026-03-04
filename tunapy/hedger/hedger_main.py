@@ -69,7 +69,7 @@ def instant_hedge(
         new_order = NewOrder(
             symbol=hedge_symbol,
             client_id=cl_order_id,
-            side='BUY' if hedge_side == 'SELL' else 'SELL', #opposite side for hedge
+            side = hedge_side,
             type='LIMIT',
             quantity=hedge_qty,
             price=hedge_price,
