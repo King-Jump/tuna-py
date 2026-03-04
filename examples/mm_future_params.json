@@ -1,15 +1,15 @@
 [
     {
         "Maker Exchange": "bifu_future",
-        "API KEY": "",
-        "Secret": "",
-        "Passphrase": "",
+        "API KEY": "Your API KEY",
+        "Secret": "Your Secret",
+        "Passphrase": "Your Passphrase",
         
         "Follow Exchange": "binance_future",
-        "Follow Symbol": "1000PEPEUSDT",
+        "Follow Symbol": "DOGEUSDT",
         
-        "Maker Symbol": "10000012",
-        "Maker Price Decimals": 8,
+        "Maker Symbol": "10000006",
+        "Maker Price Decimals": 5,
         "Maker Qty Decimals": 0,
         "Term type": "FUTURE",
 
@@ -23,9 +23,9 @@
         "Far Qty Multiplier": 0.95,
         "Far Ask Size": 5,
         "Far Bid Size": 5,
-        "Far Max Amt Per Order": 100000,
+        "Far Max Amt Per Order": 10,
         "Far Min Qty": 1e-06,
-        "Far Min Amt": 100,
+        "Far Min Amt": 1,
         "Far Diff Per Round": 5,
 
         "Near Interval": 0.5,
@@ -38,9 +38,9 @@
         "Near Qty Multiplier": 0.95,
         "Near Ask Size": 5,
         "Near Bid Size": 5,
-        "Near Max Amt Per Order": 100000,
+        "Near Max Amt Per Order": 10,
         "Near Min Qty": 1e-06,
-        "Near Min Amt": 100,
+        "Near Min Amt": 1,
         "Near Diff Per Round": 5,
         "Force Refresh Num": 10
     }

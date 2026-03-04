@@ -69,15 +69,17 @@ def instant_hedge(
         new_order = NewOrder(
             symbol=hedge_symbol,
             client_id=cl_order_id,
-            side=hedge_side,
+            side='BUY' if hedge_side == 'SELL' else 'SELL', #opposite side for hedge
             type='LIMIT',
             quantity=hedge_qty,
             price=hedge_price,
-            biz_type='SPOT',
+            biz_type=hedge_strategy['biz_type'],
             tif='GTC',
             position_side=''
         )
         
+        # set position side for future hedge
+        new_order.position_side = 'SHORT' if hedge_side == 'SELL' and hedge_strategy['biz_type'] == 'FUTURE' else 'LONG'
         logger.info('Creating hedge order: %s', new_order)
         
         # 使用 batch_make_orders 方法执行对冲
@@ -308,7 +310,7 @@ class HedgerAgent():
                     acc_risk_positions[symbol]['qty'] -= hedge_qty
                     acc_risk_positions[symbol]['amt'] -= hedge_amt
             except Exception:
-                send_maker_message(f'{symbol}_HedgeConf', f"Lost {symbol}'s hedger config")
+                self.logger.error("Failed to handle risk position %s: %s", order_id, traceback.format_exc())
 
         res = False
         if acc_risk_positions:
@@ -320,9 +322,10 @@ class HedgerAgent():
                 hedge_strategy = {
                     'symbol': self.config.hedge_symbol,
                     'min_amt': self.config.min_amt_per_order,
-                    'min_qty': self.config.min_qty_per_order
+                    'min_qty': self.config.min_qty_per_order,
+                    'biz_type': self.config.biz_type,
                 }
-                hedge_symbol = hedge_strategy['symbol']
+                # hedge_symbol = hedge_strategy['symbol']
                 hedge_amt = position['amt']
                 hedge_qty = position['qty']
                 if abs(hedge_amt) < hedge_strategy['min_amt'] or \
@@ -415,14 +418,13 @@ class HedgerAgent():
                             res:OrderStatus = self._hedge_client.order_status(
                                 order_id=hedge_order_id,
                                 symbol=hedge_symbol
-                            )
+                            )[0]
                             
                             self.logger.info('Order status response: %s', res)
                             
                             # 记录订单状态日志
                             self.monitor.info('Hedged %s: client_orderid=%s, status: %s, executedQty: %s',
-                                          symbol, cl_order_id, res.get('status', ''), 
-                                          res.get('executedQty', ''))
+                                          symbol, cl_order_id, res.status, res.executedQty)
                         except Exception as e:
                             self.logger.error('Error querying order status: %s', traceback.format_exc())
                     else:
@@ -466,7 +468,6 @@ class HedgerAgent():
                             self.logger.info('Config updated, new version: %s', version)
                             self.config = TokenParameter(new_conf)
                             self.logger.debug('update config: %s', new_conf)
-                            self._init_all_ws_clients()
                     except Exception as e:
                         self.logger.error('Error checking config update: %s', traceback.format_exc())
                     finally:
@@ -535,5 +536,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Error: failed to load config file {config_file}: {e}")
         sys.exit(1)
-
-    main(param)
