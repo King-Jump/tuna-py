@@ -244,7 +244,7 @@ async def market_making(
         for price, qty in new_asks:
             if price > top_bid:  # avoid self-trade
                 if param.term_type == 'FUTURE':
-                    # 合约订单：现货SELL对应合约LONG
+                    # Future order: Spot SELL corresponds to Future LONG
                     valid_asks.append(
                         # batch order data structure
                         NewOrder(
@@ -261,7 +261,7 @@ async def market_making(
                         )
                     )
                 else:
-                    # 现货订单
+                    # Spot order
                     valid_asks.append(
                         # batch order data structure
                         NewOrder(
@@ -283,7 +283,7 @@ async def market_making(
         for price, qty in new_bids:
             if price < top_ask:
                 if param.term_type == 'FUTURE':
-                    # 合约订单：现货BUY对应合约SHORT
+                    # Future order: Spot BUY corresponds to Future SHORT
                     valid_bids.append(
                         # batch order data structure
                         NewOrder(
@@ -300,7 +300,7 @@ async def market_making(
                         )
                     )
                 else:
-                    # 现货订单
+                    # Spot order
                     valid_bids.append(
                         # batch order data structure
                         NewOrder(

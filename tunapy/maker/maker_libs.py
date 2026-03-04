@@ -97,7 +97,7 @@ def gen_far_liquidity(symbol: str,
             # avoid self-trade
             if price < guard_price:
                 if param.term_type == 'FUTURE':
-                    # 合约订单：现货BUY对应合约SHORT
+                    # Future order: Spot BUY corresponds to Future SHORT
                     orders.append(
                         NewOrder(
                             symbol=symbol,
@@ -112,7 +112,7 @@ def gen_far_liquidity(symbol: str,
                         )
                     )
                 else:
-                    # 现货订单
+                    # Spot order
                     orders.append(
                         NewOrder(
                             symbol=symbol,
@@ -133,7 +133,7 @@ def gen_far_liquidity(symbol: str,
             # avoid self-trade
             if price > guard_price:
                 if param.term_type == 'FUTURE':
-                    # 合约订单：现货SELL对应合约LONG
+                    # Future order: Spot SELL corresponds to Future LONG
                     orders.append(
                         NewOrder(
                             symbol=symbol,
@@ -148,7 +148,7 @@ def gen_far_liquidity(symbol: str,
                         )
                     )
                 else:
-                    # 现货订单
+                    # Spot order
                     orders.append(
                         NewOrder(
                             symbol=symbol,

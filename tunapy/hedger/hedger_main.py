@@ -65,11 +65,11 @@ def instant_hedge(
         
         logger.info('Executing hedge for %s', hedge_symbol)
         
-        # 创建 NewOrder 对象
+        # Create NewOrder object
         new_order = NewOrder(
             symbol=hedge_symbol,
             client_id=cl_order_id,
-            side = hedge_side,
+            side='BUY' if hedge_side == 'SELL' else 'SELL', #opposite side for hedge
             type='LIMIT',
             quantity=hedge_qty,
             price=hedge_price,
@@ -78,11 +78,11 @@ def instant_hedge(
             position_side=''
         )
         
-        # set position side for future hedge
+        # Set position side for future hedge
         new_order.position_side = 'SHORT' if hedge_side == 'SELL' and hedge_strategy['biz_type'] == 'FUTURE' else 'LONG'
         logger.info('Creating hedge order: %s', new_order)
         
-        # 使用 batch_make_orders 方法执行对冲
+        # Execute hedge using batch_make_orders method
         try:
             order_ids = hedge_client.batch_make_orders(
                 orders=[new_order],
@@ -129,7 +129,7 @@ class HedgerAgent():
         # hedge strategy config
         self.config = config
         
-        # 初始化对冲客户端
+        # Initialize hedge client
         self._init_hedge_client()
 
         # hedge strategy related data structure
@@ -422,7 +422,7 @@ class HedgerAgent():
                             
                             self.logger.info('Order status response: %s', res)
                             
-                            # 记录订单状态日志
+                            # Log order status
                             self.monitor.info('Hedged %s: client_orderid=%s, status: %s, executedQty: %s',
                                           symbol, cl_order_id, res.status, res.executedQty)
                         except Exception as e:
